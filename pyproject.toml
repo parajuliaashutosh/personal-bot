@@ -1,0 +1,18 @@
+[project]
+name = "fastapi-personal-chatbot"
+version = "0.1.0"
+description = "Model-agnostic personal chatbot with FastAPI"
+requires-python = ">=3.10"
+
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "slowapi",
+  "chromadb",
+  "sentence-transformers",
+  "ollama",
+  "python-dotenv"
+]
+
+[tool.setuptools]
+packages = ["app"]
