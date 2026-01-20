@@ -11,9 +11,11 @@ class OllamaLLM(BaseLLM):
         return res["message"]["content"]
 
     async def stream(self, messages):
-        async for part in self.client.chat(
+        stream_response = await self.client.chat(
             model=self.model,
             messages=messages,
             stream=True
-        ):
+        )
+        
+        async for part in stream_response:
             yield part["message"]["content"]
