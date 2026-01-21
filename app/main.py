@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.security import APIKeyHeader
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
@@ -7,15 +8,58 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+from fastapi.openapi.utils import get_openapi
 
 from app.api.chat import router as chat_router
+from app.middleware.apikey_middleware import APIKeyMiddleware
 
 limiter = Limiter(key_func=get_remote_address)
 load_dotenv()
 
-app = FastAPI()
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+app = FastAPI(
+    title="Aashutosh Personal's Personal Bot API",
+    description="API with X-API-Key authentication",
+    version="1.0.0",
+    # Add OpenAPI security scheme for X-API-Key header
+    openapi_tags=[],
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+        "syntaxHighlight": False
+    }
+)
+
 app.state.limiter = limiter
+
+# Custom OpenAPI schema to add X-API-Key header
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    openapi_schema["components"]["securitySchemes"] = {
+        "APIKeyHeader": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-Key"
+        }
+    }
+    openapi_schema["security"] = [{"APIKeyHeader": []}]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+app.add_middleware(APIKeyMiddleware)
 app.add_middleware(SlowAPIMiddleware)
+
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
