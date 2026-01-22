@@ -1,8 +1,10 @@
 from app.memory.vector import VectorStore
+from app.config import get_llm
 
 class ChatService:
     def __init__(self):
         self.memory = VectorStore()
+        self.llm = get_llm()
 
     def classify_query_intent(self, query: str) -> str:
         """Determine what the user is asking about"""
@@ -108,3 +110,34 @@ class ChatService:
             f"4. Speak in first person as if you ARE Aashutosh (use 'I' not 'he')\n"
             f"5. Be professional but conversational\n"
         )
+        
+        
+    def chat(self, query: str) -> str:
+        """Main chat function to get response based on query"""
+        context = self.get_enhanced_context(query)
+        system_prompt = self.build_system_prompt(context, query)
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query},
+        ]
+
+        reply = self.llm.chat(messages)
+
+        return reply
+    
+    def stream_chat(self, query: str) -> str:
+        """Stream Chat function to get response based on query"""
+        context = self.get_enhanced_context(query)
+        system_prompt = self.build_system_prompt(context, query)
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query},
+        ]
+
+        async def generator():
+            async for token in self.llm.stream(messages):
+                yield f"data: {token}\n\n"
+                
+        return generator()

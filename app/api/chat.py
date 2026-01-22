@@ -1,4 +1,5 @@
 from typing import Optional
+from urllib import response
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
@@ -34,16 +35,8 @@ async def chat(payload: dict):
 # @limiter.limit("5/minute")
 async def chat_stream(request: Request, payload: dict):
     query = payload["message"]
-    context = memory.search(query)
+    
+    # Use the service
+    response    = chat_service.stream_chat(query)
 
-    messages = [
-        {"role": "system", "content": "You are my personal assistant."},
-        {"role": "system", "content": f"User info:\n{context}"},
-        {"role": "user", "content": query},
-    ]
-
-    async def generator():
-        async for token in llm.stream(messages):
-            yield f"data: {token}\n\n"
-
-    return StreamingResponse(generator(), media_type="text/event-stream")
+    return StreamingResponse(response, media_type="text/event-stream")              
