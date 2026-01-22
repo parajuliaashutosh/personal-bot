@@ -11,7 +11,8 @@ dependencies = [
   "chromadb",
   "sentence-transformers",
   "ollama",
-  "python-dotenv"
+  "python-dotenv",
+  "numpy",
 ]
 
 [tool.setuptools]

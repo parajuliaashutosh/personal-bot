@@ -1,9 +1,12 @@
 from app.memory.vector import VectorStore
 from app.config import get_llm
+from app.service.intent_classifier.intent_classifier import IntentClassifier
+
 
 class ChatService:
     def __init__(self):
         self.memory = VectorStore()
+        self.intent = IntentClassifier()
         self.llm = get_llm()
 
     def classify_query_intent(self, query: str) -> str:
@@ -42,7 +45,7 @@ class ChatService:
 
     def get_enhanced_context(self, query: str, k: int = 5) -> str:
         """Get context with intent-based filtering using the internal memory"""
-        intent = self.classify_query_intent(query)
+        intent = self.intent.classify_query_intent(query)
 
         print(f"🎯 Detected intent: {intent}")
 
@@ -110,8 +113,7 @@ class ChatService:
             f"4. Speak in first person as if you ARE Aashutosh (use 'I' not 'he')\n"
             f"5. Be professional but conversational\n"
         )
-        
-        
+
     def chat(self, query: str) -> str:
         """Main chat function to get response based on query"""
         context = self.get_enhanced_context(query)
@@ -125,7 +127,7 @@ class ChatService:
         reply = self.llm.chat(messages)
 
         return reply
-    
+
     def stream_chat(self, query: str) -> str:
         """Stream Chat function to get response based on query"""
         context = self.get_enhanced_context(query)
@@ -139,5 +141,5 @@ class ChatService:
         async def generator():
             async for token in self.llm.stream(messages):
                 yield f"data: {token}\n\n"
-                
+
         return generator()
