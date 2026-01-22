@@ -1,8 +1,10 @@
 from ollama import AsyncClient
 from app.llm.base import BaseLLM
 
+
 class OllamaLLM(BaseLLM):
     def __init__(self, model="llama3.2"):
+        print("Running model:", model)
         self.client = AsyncClient()
         self.model = model
 
@@ -16,6 +18,6 @@ class OllamaLLM(BaseLLM):
             messages=messages,
             stream=True
         )
-        
+
         async for part in stream_response:
             yield part["message"]["content"]
