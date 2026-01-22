@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import os
 from fastapi.openapi.utils import get_openapi
 
-from app.api.chat import router as chat_router
+from app.api.chat_api import router as chat_router
 from app.middleware.apikey_middleware import APIKeyMiddleware
 
 limiter = Limiter(key_func=get_remote_address)
@@ -33,17 +33,19 @@ app = FastAPI(
 app.state.limiter = limiter
 
 # Custom OpenAPI schema to add X-API-Key header
+
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
         description=app.description,
         routes=app.routes,
     )
-    
+
     openapi_schema["components"]["securitySchemes"] = {
         "APIKeyHeader": {
             "type": "apiKey",
@@ -52,9 +54,10 @@ def custom_openapi():
         }
     }
     openapi_schema["security"] = [{"APIKeyHeader": []}]
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
 
 app.openapi = custom_openapi
 app.add_middleware(APIKeyMiddleware)

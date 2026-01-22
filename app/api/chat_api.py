@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from app.config import get_llm
 from app.memory.vector import VectorStore
+from app.schema.chat_schema import ChatRequest
 from app.service.chat_service import ChatService
 
 router = APIRouter()
@@ -15,28 +16,30 @@ llm = get_llm()
 memory = VectorStore()
 chat_service = ChatService()
 
+
 @router.post("/chat")
-async def chat(payload: dict):
-    query = payload["message"]
-    
+async def chat(payload: ChatRequest):
+    query = payload.message
+
     # Use the service
     context = chat_service.get_enhanced_context(query)
     system_prompt = chat_service.build_system_prompt(context, query)
-    
+
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": query},
     ]
-    
+
     reply = await llm.chat(messages)
     return {"reply": reply}
 
+
 @router.post("/chat/stream")
 # @limiter.limit("5/minute")
-async def chat_stream(request: Request, payload: dict):
-    query = payload["message"]
-    
-    # Use the service
-    response    = chat_service.stream_chat(query)
+async def chat_stream(payload: ChatRequest):
+    query = payload.message
 
-    return StreamingResponse(response, media_type="text/event-stream")              
+    # Use the service
+    response = chat_service.stream_chat(query)
+
+    return StreamingResponse(response, media_type="text/event-stream")

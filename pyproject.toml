@@ -13,6 +13,7 @@ dependencies = [
   "ollama",
   "python-dotenv",
   "numpy",
+  "pydantic",
 ]
 
 [tool.setuptools]
