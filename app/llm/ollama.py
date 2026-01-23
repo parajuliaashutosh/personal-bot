@@ -20,4 +20,6 @@ class OllamaLLM(BaseLLM):
         )
 
         async for part in stream_response:
-            yield part["message"]["content"]
+            content = part["message"]["content"]
+            if content:
+                yield content

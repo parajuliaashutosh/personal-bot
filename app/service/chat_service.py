@@ -9,40 +9,6 @@ class ChatService:
         self.intent = IntentClassifier()
         self.llm = get_llm()
 
-    def classify_query_intent(self, query: str) -> str:
-        """Determine what the user is asking about"""
-        query_lower = query.lower()
-
-        # Professional experience keywords
-        if any(word in query_lower for word in [
-            "work", "job", "professional", "company", "employer",
-            "experience", "career", "position", "role", "working"
-        ]):
-            return "professional_experience"
-
-        # Personal projects keywords
-        elif any(word in query_lower for word in [
-            "project", "built", "created", "developed", "github",
-            "personal project", "side project"
-        ]):
-            return "personal_projects"
-
-        # Education keywords
-        elif any(word in query_lower for word in [
-            "education", "school", "college", "degree", "university",
-            "gpa", "graduated", "study", "studied"
-        ]):
-            return "education"
-
-        # Skills/technical keywords
-        elif any(word in query_lower for word in [
-            "skill", "technology", "tech stack", "programming",
-            "language", "framework", "know", "familiar"
-        ]):
-            return "skills"
-
-        return "general"
-
     def get_enhanced_context(self, query: str, k: int = 5) -> str:
         """Get context with intent-based filtering using the internal memory"""
         intent = self.intent.classify_query_intent(query)
@@ -68,7 +34,7 @@ class ChatService:
 
     def build_system_prompt(self, context: str, query: str) -> str:
         """Build a better system prompt based on query type"""
-        intent = self.classify_query_intent(query)
+        intent = self.intent.classify_query_intent(query)
 
         base_prompt = (
             "You are Aashutosh's personal assistant AI. "

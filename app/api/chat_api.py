@@ -57,9 +57,26 @@ async def chat(payload: ChatRequest):
 @router.post("/chat/stream")
 # @limiter.limit("5/minute")
 async def chat_stream(payload: ChatRequest):
-    query = payload.message
+    try:
+        query = payload.message
 
-    # Use the service
-    response = chat_service.stream_chat(query)
+        # Use the service
+        response = chat_service.stream_chat(query)
 
-    return StreamingResponse(response, media_type="text/event-stream")
+        return StreamingResponse(response, media_type="text/event-stream")
+
+    except ValueError as e:
+        # Bad request - client error
+        return APIResponse.error_response(
+            message=f"Invalid request: {str(e)}",
+            data=None,
+            status_code=400
+        )
+    except Exception as e:
+        # Internal server error
+        print("Eroor print", e)
+        return APIResponse.error_response(
+            message=f"Oops! Something went wrong. Please try again later.",
+            data=None,
+            status_code=500
+        )
