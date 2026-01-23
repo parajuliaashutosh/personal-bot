@@ -1,11 +1,12 @@
 from typing import Optional
 from urllib import response
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from app.config import get_llm
 from app.memory.vector import VectorStore
 from app.schema.chat_schema import ChatRequest
+from app.schema.response_schema import APIResponse
 from app.service.chat_service import ChatService
 
 router = APIRouter()
@@ -19,19 +20,38 @@ chat_service = ChatService()
 
 @router.post("/chat")
 async def chat(payload: ChatRequest):
-    query = payload.message
+    try:
+        query = payload.message
 
-    # Use the service
-    context = chat_service.get_enhanced_context(query)
-    system_prompt = chat_service.build_system_prompt(context, query)
+        # Use the service
+        context = chat_service.get_enhanced_context(query)
+        system_prompt = chat_service.build_system_prompt(context, query)
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": query},
-    ]
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query},
+        ]
 
-    reply = await llm.chat(messages)
-    return {"reply": reply}
+        reply = await llm.chat(messages)
+        return APIResponse.success_response(
+            message="Chat response generated successfully",
+            data={"reply": reply},
+            status_code=200
+        )
+    except ValueError as e:
+        # Bad request - client error
+        return APIResponse.error_response(
+            message=f"Invalid request: {str(e)}",
+            data=None,
+            status_code=400
+        )
+    except Exception as e:
+        # Internal server error
+        return APIResponse.error_response(
+            message=f"Failed to generate chat response: {str(e)}",
+            data=None,
+            status_code=500
+        )
 
 
 @router.post("/chat/stream")
