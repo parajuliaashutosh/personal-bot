@@ -22,26 +22,26 @@
 - REST API design and implementation
 - Module-based architecture
 - Guards, interceptors, and middleware patterns
-- Experience: 2+ years
+- Experience: 2+ years (Professional & Personal projects)
 
 ### FastAPI
 
 - RAG-based chatbot development
 - Async API patterns
 - Streaming responses
-- Experience: 6+ months
+- Experience: Personal project
 
 ### Spring Boot
 
 - Worklog management system
 - REST API development
-- Experience: Project-based
+- Experience: Personal project
 
 ### Micronaut
 
 - gRPC microservices
 - Donation platform backend
-- Experience: Project-based
+- Experience: Personal project
 
 ---
 
@@ -78,19 +78,17 @@
 
 - Async message processing
 - Event-driven architecture
-- Experience: 1+ year
 
 ### Temporal.io
 
 - Durable workflow orchestration
 - Long-running process management
-- Experience: Project-based
 
 ---
 
 ## API Technologies
 
-### REST APIRedis, RabbitMQ, React, Next.js
+### REST API
 
 - RESTful design principles
 - API versioning

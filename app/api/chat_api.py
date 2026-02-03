@@ -3,6 +3,7 @@ from urllib import response
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.config import get_llm
 from app.memory.vector import VectorStore
 from app.schema.chat_schema import ChatRequest
@@ -10,7 +11,7 @@ from app.schema.response_schema import APIResponse
 from app.service.chat_service import ChatService
 
 router = APIRouter()
-limiter = Limiter(key_func=lambda req: req.client.host)
+limiter = Limiter(key_func=get_remote_address)
 
 
 llm = get_llm()
@@ -19,8 +20,8 @@ chat_service = ChatService()
 
 
 @router.post("/chat")
-# @limiter.limit("5/minute")
-async def chat(payload: ChatRequest):
+@limiter.limit("5/minute")
+async def chat(request: Request, payload: ChatRequest):
     try:
         query = payload.message
 
@@ -83,8 +84,8 @@ async def chat(payload: ChatRequest):
 
 
 @router.post("/chat/stream")
-# @limiter.limit("5/minute")
-async def chat_stream(payload: ChatRequest):
+@limiter.limit("5/minute")
+async def chat_stream(request: Request, payload: ChatRequest):
     try:
         query = payload.message
 

@@ -52,7 +52,7 @@ class ChatService:
         elif intent == "personal_projects":
             specific_instruction = (
                 "The user is asking about Aashutosh's personal projects. "
-                "Focus on side projects like FastAPI Chatbot, Charitable, Discuss Forum, etc. "
+                "Focus on side projects like FastAPI Chatbot, International Money Order, Charitable, Discuss Forum, etc. "
                 "Include GitHub links and technologies used.\n\n"
             )
         elif intent == "education":
@@ -63,7 +63,8 @@ class ChatService:
         elif intent == "skills":
             specific_instruction = (
                 "The user is asking about Aashutosh's technical skills and tech stack. "
-                "Highlight his proficiency in Python, FastAPI, and other specific technologies mentioned in the context.\n\n"
+                "Focus on his primary skills (NestJS, TypeScript, PostgreSQL) and professional experience technologies. "
+                "Mention the specific proficiency levels and experience duration from the context.\n\n"
             )
         else:
             specific_instruction = ""

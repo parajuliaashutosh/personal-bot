@@ -1,5 +1,14 @@
 from pathlib import Path
 from app.memory.vector import VectorStore
+import chromadb
+
+# Clear existing data first
+client = chromadb.PersistentClient(path="./chroma_db")
+try:
+    client.delete_collection("memory")
+    print("✅ Cleared old data from ChromaDB")
+except Exception as e:
+    print(f"No existing collection to clear: {e}")
 
 store = VectorStore()
 texts = []

@@ -12,6 +12,7 @@ from fastapi.openapi.utils import get_openapi
 
 from app.api.chat_api import router as chat_router
 from app.middleware.apikey_middleware import APIKeyMiddleware
+from app.schema.response_schema import APIResponse
 
 limiter = Limiter(key_func=get_remote_address)
 load_dotenv()
@@ -66,7 +67,11 @@ app.add_middleware(SlowAPIMiddleware)
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
+    return APIResponse.error_response(
+        message="Rate limit exceeded. Please slow down and try again later.",
+        data={"retry_after": str(exc.detail)},
+        status_code=429
+    )
 
 origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 
