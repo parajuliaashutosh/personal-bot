@@ -1,0 +1,50 @@
+name: Aashutosh Parajuli
+role: Software Engineer
+current_company: Hamro Patro Inc.
+experience_years: 2+
+location: Nepal
+preferred_language: English
+tone: concise and technical
+
+contact:
+  github: https://github.com/parajuliaashutosh
+  email: parajuliaashutosh@gmail.com
+
+summary: |
+  Software Engineer with 2+ years of experience in building scalable systems.
+  Currently working at Hamro Patro Inc. on fintech products (Hamro Remit, Hamro Pay).
+  Passionate about distributed systems, API design, and solving complex engineering problems.
+
+skills:
+  languages:
+    - TypeScript
+    - JavaScript
+    - Python
+    - Java
+  frameworks:
+    - NestJS
+    - FastAPI
+    - Spring Boot
+    - Micronaut
+    - Next.js
+    - React
+    - Svelte
+  databases:
+    - PostgreSQL
+    - Redis
+    - ChromaDB
+  tools:
+    - Docker
+    - Git
+    - RabbitMQ
+    - Temporal.io
+    - gRPC
+    - GraphQL
+
+interests:
+  - Backend systems
+  - Distributed systems
+  - API design
+  - Fintech
+  - Data engineering
+  - LLM applications

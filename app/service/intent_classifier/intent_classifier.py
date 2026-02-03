@@ -4,7 +4,7 @@ import numpy as np
 
 class IntentClassifier:
     def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 
         # Define intent templates with multiple examples
         self.intent_templates = {

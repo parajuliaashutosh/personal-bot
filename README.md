@@ -1,6 +1,7 @@
 # FastAPI Personal Chatbot (Model-Agnostic)
 
 ## Features
+
 - FastAPI
 - uv package manager
 - Local LLM via Ollama
@@ -19,14 +20,21 @@ uv pip install -r pyproject.toml
 ```
 
 ## Run
+
 ```bash
 uvicorn app.main:app --reload
 ```
 
+## data to ingest
+
+Replace your personal data (PDFs, text files, etc.) in the `data/`. Donot use json files inside data
+
 ## Ingest personal data
+
 ```bash
-python app/memory/ingest.py
+python -m app.memory.ingest
 ```
 
 ## Environment Variables
+
 Data

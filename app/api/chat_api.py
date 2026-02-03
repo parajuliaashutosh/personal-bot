@@ -19,6 +19,7 @@ chat_service = ChatService()
 
 
 @router.post("/chat")
+# @limiter.limit("5/minute")
 async def chat(payload: ChatRequest):
     try:
         query = payload.message
@@ -39,16 +40,43 @@ async def chat(payload: ChatRequest):
             status_code=200
         )
     except ValueError as e:
+        print("Value error in chat:", e)
         # Bad request - client error
         return APIResponse.error_response(
             message=f"Invalid request: {str(e)}",
             data=None,
             status_code=400
         )
+
+    except RuntimeError as e:
+        print("Runtime error in chat:", e)
+        # Check if this is a PyTorch memory error
+        if "out of memory" in str(e).lower() or "requires more system memory" in str(e).lower():
+            return APIResponse.error_response(
+                message="Server is under heavy load. Please try again in a few minutes.",
+                data=None,
+                status_code=503  # 503 = Service Unavailable
+            )
+
+        # Otherwise, treat as generic runtime error
+        return APIResponse.error_response(
+            message="Oops! Something went wrong. Please try again later.",
+            data=None,
+            status_code=500
+        )
+
     except Exception as e:
+        print("Error in chat:", e)
+        if "requires more system memory" in str(e).lower() or "requires more system memory" in str(e).lower():
+            return APIResponse.error_response(
+                message="Server is under heavy load. Please try again in a few minutes.",
+                data=None,
+                status_code=503  # 503 = Service Unavailable
+            )
+
         # Internal server error
         return APIResponse.error_response(
-            message=f"Failed to generate chat response: {str(e)}",
+            message=f"Oops! Something went wrong. Please try again later.",
             data=None,
             status_code=500
         )
@@ -72,9 +100,32 @@ async def chat_stream(payload: ChatRequest):
             data=None,
             status_code=400
         )
+
+    except RuntimeError as e:
+        # Check if this is a PyTorch memory error
+        if "out of memory" in str(e).lower() or "requires more system memory" in str(e).lower():
+            return APIResponse.error_response(
+                message="Server is under heavy load. Please try again in a few minutes.",
+                data=None,
+                status_code=503  # 503 = Service Unavailable
+            )
+
+        # Otherwise, treat as generic runtime error
+        return APIResponse.error_response(
+            message="Oops! Something went wrong. Please try again later.",
+            data=None,
+            status_code=500
+        )
+
     except Exception as e:
         # Internal server error
-        print("Eroor print", e)
+        if "requires more system memory" in str(e).lower() or "requires more system memory" in str(e).lower():
+            return APIResponse.error_response(
+                message="Server is under heavy load. Please try again in a few minutes.",
+                data=None,
+                status_code=503  # 503 = Service Unavailable
+            )
+
         return APIResponse.error_response(
             message=f"Oops! Something went wrong. Please try again later.",
             data=None,
