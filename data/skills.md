@@ -4,13 +4,13 @@
 
 ## Programming Languages
 
-| Language   | Proficiency  | Experience |
-| ---------- | ------------ | ---------- |
-| TypeScript | Proficient   | 2+ years   |
-| JavaScript | Proficient   | 2+ years   |
-| Python     | Intermediate | 1+ years   |
-| Java       | Intermediate | 1+ years   |
-| SQL        | Expert       | 2+ years   |
+| Language   |
+| ---------- |
+| TypeScript |
+| JavaScript |
+| Python     |
+| Java       |
+| SQL        |
 
 ---
 
@@ -121,11 +121,11 @@
 
 ## Frontend Technologies
 
-| Technology | Proficiency  |
-| ---------- | ------------ |
-| React      | Intermediate |
-| Next.js    | Intermediate |
-| Svelte 5   | Learning     |
+| Technology |
+| ---------- |
+| React      |
+| Next.js    |
+| Svelte 5   |
 
 ---
 

@@ -14,17 +14,22 @@ else:
     for file in data_path.glob("*"):
         content = file.read_text().strip()
         chunks = [c for c in content.split("\n\n") if c.strip()]
-        
+
         # Determine metadata based on filename
         if file.name == "experience.md":
-            metadata = [{"type": "professional_experience", "source": file.name}] * len(chunks)
+            metadata = [{"type": "professional_experience",
+                         "source": file.name}] * len(chunks)
         elif file.name == "projects.md":
-            metadata = [{"type": "personal_projects", "source": file.name}] * len(chunks)
+            metadata = [{"type": "personal_projects",
+                         "source": file.name}] * len(chunks)
         elif file.name == "education.md":
-            metadata = [{"type": "education", "source": file.name}] * len(chunks)
+            metadata = [{"type": "education",
+                         "source": file.name}] * len(chunks)
+        elif file.name == "skills.md":
+            metadata = [{"type": "skills", "source": file.name}] * len(chunks)
         else:
             metadata = [{"type": "general", "source": file.name}] * len(chunks)
-        
+
         texts.extend(chunks)
         all_metadata.extend(metadata)
 

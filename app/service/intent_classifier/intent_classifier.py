@@ -54,6 +54,8 @@ class IntentClassifier:
 
         # Return intent with highest similarity (if above threshold)
         best_intent = max(similarities, key=similarities.get)
-        if similarities[best_intent] > 0.5:  # Threshold
+        print("Best intent similarities:",
+              best_intent, similarities[best_intent])
+        if similarities[best_intent] > 0.35:  # Threshold
             return best_intent
         return "general"
