@@ -16,7 +16,7 @@ summary: |
   Currently working at Hamro Patro Inc. on fintech products (Hamro Remit, Hamro Pay).
   Passionate about distributed systems, API design, and solving complex engineering problems.
 
-skills:
+technical-skills:
   languages:
     - TypeScript
     - JavaScript
@@ -41,7 +41,14 @@ skills:
     - Temporal.io
     - gRPC
     - GraphQL
-
+  
+soft-skills:
+  - Problem-solving
+  - Communication
+  - Team collaboration
+  - Adaptability
+  - Time management
+  
 interests:
   - Backend systems
   - Distributed systems
