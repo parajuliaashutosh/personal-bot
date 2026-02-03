@@ -15,7 +15,51 @@ class ChatService:
 
         print(f"🎯 Detected intent: {intent}")
 
-        # Try filtered search first
+        # For skills queries, search across multiple sources
+        # to find projects/experience using that technology
+        if intent == "skills":
+            # First get skills info
+            skills_context = self.memory.search(
+                query,
+                k=3,
+                filter_metadata={"type": "skills"}
+            )
+
+            # Then search professional experience for practical usage
+            experience_context = self.memory.search(
+                query,
+                k=2,
+                filter_metadata={"type": "professional_experience"}
+            )
+
+            # Then search personal projects for practical usage
+            projects_context = self.memory.search(
+                query,
+                k=2,
+                filter_metadata={"type": "personal_projects"}
+            )
+
+            # Combine all contexts
+            all_contexts = []
+            if skills_context and skills_context.strip():
+                all_contexts.append(f"## Technical Skills\n{skills_context}")
+            if experience_context and experience_context.strip():
+                all_contexts.append(
+                    f"## Professional Experience Using This Technology\n{experience_context}")
+            if projects_context and projects_context.strip():
+                all_contexts.append(
+                    f"## Personal Projects Using This Technology\n{projects_context}")
+
+            context = "\n\n".join(all_contexts) if all_contexts else ""
+
+            # If still nothing, do general search
+            if not context or len(context.strip()) < 50:
+                print(f"⚠️  Skills search empty, falling back to general search")
+                context = self.memory.search(query, k=k)
+
+            return context
+
+        # Try filtered search first for other intents
         if intent != "general":
             context = self.memory.search(
                 query,
@@ -62,9 +106,12 @@ class ChatService:
             )
         elif intent == "skills":
             specific_instruction = (
-                "The user is asking about Aashutosh's technical skills and tech stack. "
-                "Focus on his primary skills (NestJS, TypeScript, PostgreSQL) and professional experience technologies. "
-                "Mention the specific proficiency levels and experience duration from the context.\n\n"
+                "The user is asking about Aashutosh's technical skills. "
+                "When explaining skills in a specific technology:\n"
+                "1. First mention the proficiency level if available\n"
+                "2. Then describe projects built using that technology (from professional experience OR personal projects)\n"
+                "3. Include specific features/systems built with that technology\n"
+                "Example: 'I have experience with Python through my FastAPI Personal Chatbot project where I built RAG-based retrieval...'\n\n"
             )
         else:
             specific_instruction = ""
