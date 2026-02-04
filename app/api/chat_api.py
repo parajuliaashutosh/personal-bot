@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from app.config import get_llm
+from app.config.llm import get_llm
 from app.memory.vector import VectorStore
 from app.schema.chat_schema import ChatRequest
 from app.schema.response_schema import APIResponse
