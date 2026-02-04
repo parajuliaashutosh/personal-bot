@@ -18,7 +18,7 @@ A production-grade, **data-agnostic** Personal AI Assistant that learns from you
 
 ```bash
 # Clone and setup
-git clone [your-repo-url]
+git clone git@github.com:parajuliaashutosh/personal-bot.git
 cd fastapi-personal-chatbot
 python setup_personal_chatbot.py
 ```
@@ -117,14 +117,10 @@ Built a personal assistant that learns from user data...
 OPENAI_API_KEY=your_openai_key_here
 # OR
 OLLAMA_MODEL=llama3.2
-OLLAMA_BASE_URL=http://localhost:11434
 
 # Security
 API_KEY=your_secure_api_key
 
-# Rate Limiting
-RATE_LIMIT_REQUESTS=100
-RATE_LIMIT_WINDOW=3600
 ```
 
 ## 🔧 Usage
@@ -296,11 +292,6 @@ MIT License - feel free to customize for your needs!
 - Add more specific content to your data files
 - Include relevant keywords and technologies
 - Re-run ingestion after content updates
-
-**Rate limiting issues:**
-
-- Adjust limits in `.env`: `RATE_LIMIT_REQUESTS` and `RATE_LIMIT_WINDOW`
-- Use proper API key in requests
 
 ### Getting Help
 
