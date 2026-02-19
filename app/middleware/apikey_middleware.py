@@ -8,7 +8,7 @@ from app.schema.response_schema import APIResponse
 
 load_dotenv()
 API_KEY = os.getenv("X_API_KEY")
-NON_BROWSER_KEY = os.getenv("NON_BROWSER_KEY")
+X_NON_BROWSER_KEY = os.getenv("X_NON_BROWSER_KEY")
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
@@ -16,6 +16,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         # Only protect POST requests
         if request.method == "POST":
             api_key = request.headers.get("x-api-key")
+            print("🔑 API Key received:", api_key)
+            print("Sys api key:", API_KEY)
             user_agent = request.headers.get("user-agent", "")
 
             if not api_key or api_key != API_KEY:
@@ -27,7 +29,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
             if "mozilla" not in user_agent.lower():
                 api_key_2 = request.headers.get("x-non-browser-key")
-                if not api_key_2 or api_key_2 != NON_BROWSER_KEY:
+                if not api_key_2 or api_key_2 != X_NON_BROWSER_KEY:
                     return APIResponse.error_response(
                         message="Invalid or missing non-browser API key",
                         data=None,
