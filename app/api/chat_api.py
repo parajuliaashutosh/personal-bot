@@ -95,6 +95,7 @@ async def chat_stream(request: Request, payload: ChatRequest):
         return StreamingResponse(response, media_type="text/event-stream")
 
     except ValueError as e:
+        print("Value error in chat stream:", e)
         # Bad request - client error
         return APIResponse.error_response(
             message=f"Invalid request: {str(e)}",
@@ -103,6 +104,7 @@ async def chat_stream(request: Request, payload: ChatRequest):
         )
 
     except RuntimeError as e:
+        print("Runtime error in chat stream:", e)
         # Check if this is a PyTorch memory error
         if "out of memory" in str(e).lower() or "requires more system memory" in str(e).lower():
             return APIResponse.error_response(
@@ -119,6 +121,7 @@ async def chat_stream(request: Request, payload: ChatRequest):
         )
 
     except Exception as e:
+        print("Error in chat stream:", e)
         # Internal server error
         if "requires more system memory" in str(e).lower() or "requires more system memory" in str(e).lower():
             return APIResponse.error_response(

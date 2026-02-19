@@ -1,0 +1,81 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_ORIGINS=*
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: ollama-init
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - chatbot-network
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["ollama", "pull", "llama3.2"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: personal-chatbot-ingest
+    command: python -m app.memory.ingest
+    volumes:
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+      - ./.env:/app/.env
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - chatbot-network
+    restart: "no"
+
+  chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: personal-chatbot
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+      - ./.env:/app/.env
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+
+networks:
+  chatbot-network:
+    driver: bridge

@@ -1,0 +1,45 @@
+# Git files
+.git
+.gitignore
+
+# Python cache files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+build
+*.egg-info
+dist
+
+# Virtual environments
+.venv
+env
+venv
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (will be mounted as volumes)
+.env
+
+# Logs
+*.log
+logs/
+
+# Documentation
+README.md
+*.md
+
+# Docker files (not needed in container)
+Dockerfile
+docker-compose.yml
+.dockerignore

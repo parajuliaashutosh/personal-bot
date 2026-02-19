@@ -3,9 +3,9 @@ from app.llm.base import BaseLLM
 
 
 class OllamaLLM(BaseLLM):
-    def __init__(self, model="llama3.2"):
-        print("Running model:", model)
-        self.client = AsyncClient()
+    def __init__(self, model="llama3.2", host="http://localhost:11434"):
+        print(f"Running model: {model} on host: {host}")
+        self.client = AsyncClient(host=host)
         self.model = model
 
     async def chat(self, messages):
