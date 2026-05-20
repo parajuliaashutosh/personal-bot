@@ -27,13 +27,13 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                     status_code=401
                 )
 
-            if "mozilla" not in user_agent.lower():
-                api_key_2 = request.headers.get("x-non-browser-key")
-                if not api_key_2 or api_key_2 != X_NON_BROWSER_KEY:
-                    return APIResponse.error_response(
-                        message="Invalid or missing non-browser API key",
-                        data=None,
-                        status_code=401
-                    )
+            # if "mozilla" not in user_agent.lower():
+            #     api_key_2 = request.headers.get("x-non-browser-key")
+            #     if not api_key_2 or api_key_2 != X_NON_BROWSER_KEY:
+            #         return APIResponse.error_response(
+            #             message="Invalid or missing non-browser API key",
+            #             data=None,
+            #             status_code=401
+            #         )
 
         return await call_next(request)

@@ -15,7 +15,8 @@ dependencies = [
   "numpy",
   "pydantic",
   "PyYaml",
-  "aiofiles"
+  "aiofiles",
+  "google-genai>=2.4.0",
 ]
 
 [tool.setuptools]

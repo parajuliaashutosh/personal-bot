@@ -9,7 +9,7 @@ from app.config.intent_config import (
     IntentConfig,
     SOURCE_DISPLAY_NAMES,
 )
-from app.config.llm import get_llm
+from app.config.llm_factory import get_llm
 
 __all__ = [
     "INTENT_CONFIGS",
