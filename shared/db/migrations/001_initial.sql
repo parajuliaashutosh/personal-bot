@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS documents (
     file_path TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',  -- pending | processing | ready | rejected | failed
     rejection_reason TEXT,
-    retry_count INT NOT NULL DEFAULT 0,
     page_count INT,
     processed_at TIMESTAMPTZ DEFAULT now()
 );
@@ -47,13 +46,6 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     retrieved_chunk_ids UUID[],
     rerank_scores JSONB,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS api_keys (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    key_hash TEXT NOT NULL UNIQUE,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 

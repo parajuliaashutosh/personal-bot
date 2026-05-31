@@ -2,13 +2,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Database
     database_url: str
-
-    # RabbitMQ
-    rabbitmq_url: str
 
     # LLM provider
     llm_provider: str = "gemini"  # "gemini" | "ollama"
@@ -23,15 +20,18 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.2"
     ollama_embed_model: str = "nomic-embed-text"
 
-    # Security
-    api_key: str
+    # Security — two route-scoped keys
+    api_key: str       # valid on /chat/* only
+    admin_key: str     # valid on /ingest/* and /admin/* only
+
+    # Geo enrichment (optional)
+    ipinfo_api_key: str = ""
 
     # Ingestion limits
     max_file_size_mb: int = 50
     max_pages: int = 500
     pdf_dir: str = "pdfs"
     embed_batch_size: int = 20
-    max_retries: int = 3
 
     # Retrieval limits
     context_token_limit: int = 3000

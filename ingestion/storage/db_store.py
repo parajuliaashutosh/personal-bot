@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from pathlib import Path
 from typing import TypedDict
 
 from asyncpg import Pool
 
-from shared.config.settings import settings
-
 
 class EligibleFile(TypedDict):
     filename: str
     file_path: str
     sha256: str
-    is_new: bool  # False = was rejected, needs reset
+    is_new: bool  # False = was rejected/failed, needs reset
 
 
 def _sha256(path: Path) -> str:
@@ -25,13 +24,9 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-async def get_eligible_files(pdf_dir: str, pool: Pool) -> tuple[list[EligibleFile], list[str]]:
-    """
-    Scan pdf_dir for .pdf files.
-    Returns (eligible, skipped_filenames).
-    Eligible = new files + previously rejected files.
-    Skipped = already ready or processing.
-    """
+async def get_eligible_files(
+    pdf_dir: str, pool: Pool
+) -> tuple[list[EligibleFile], list[str]]:
     dir_path = Path(pdf_dir)
     pdfs = list(dir_path.glob("*.pdf"))
 
@@ -39,7 +34,6 @@ async def get_eligible_files(pdf_dir: str, pool: Pool) -> tuple[list[EligibleFil
         return [], []
 
     hashes = {_sha256(p): p for p in pdfs}
-
     rows = await pool.fetch(
         "SELECT sha256, status FROM documents WHERE sha256 = ANY($1::text[])",
         list(hashes.keys()),
@@ -53,7 +47,7 @@ async def get_eligible_files(pdf_dir: str, pool: Pool) -> tuple[list[EligibleFil
         status = known.get(sha)
         if status in ("ready", "processing"):
             skipped.append(path.name)
-        elif status == "rejected":
+        elif status in ("rejected", "failed"):
             eligible.append({"filename": path.name, "file_path": str(path), "sha256": sha, "is_new": False})
         else:
             eligible.append({"filename": path.name, "file_path": str(path), "sha256": sha, "is_new": True})
@@ -61,14 +55,23 @@ async def get_eligible_files(pdf_dir: str, pool: Pool) -> tuple[list[EligibleFil
     return eligible, skipped
 
 
-async def create_document(filename: str, file_path: str, sha256: str, pool: Pool) -> uuid.UUID:
+async def create_document(
+    filename: str, file_path: str, sha256: str, pool: Pool
+) -> uuid.UUID:
     row = await pool.fetchrow(
-        """
-        INSERT INTO documents (filename, file_path, sha256, status)
-        VALUES ($1, $2, $3, 'pending')
-        RETURNING id
-        """,
+        "INSERT INTO documents (filename, file_path, sha256, status)"
+        " VALUES ($1, $2, $3, 'pending') RETURNING id",
         filename, file_path, sha256,
+    )
+    return row["id"]
+
+
+async def reset_document(sha256: str, pool: Pool) -> uuid.UUID:
+    row = await pool.fetchrow(
+        "UPDATE documents"
+        " SET status = 'pending', rejection_reason = NULL, processed_at = now()"
+        " WHERE sha256 = $1 RETURNING id",
+        sha256,
     )
     return row["id"]
 
@@ -81,43 +84,49 @@ async def update_document_status(
     page_count: int | None = None,
 ) -> None:
     await pool.execute(
-        """
-        UPDATE documents
-        SET status = $1,
-            rejection_reason = $2,
-            page_count = $3,
-            processed_at = now()
-        WHERE id = $4
-        """,
+        "UPDATE documents"
+        " SET status = $1,"
+        "     rejection_reason = COALESCE($2, rejection_reason),"
+        "     page_count = COALESCE($3, page_count),"
+        "     processed_at = now()"
+        " WHERE id = $4",
         status, rejection_reason, page_count, document_id,
     )
 
 
-async def insert_chunks(document_id: uuid.UUID, chunks: list[dict], pool: Pool) -> None:
-    """
-    Insert embedded chunks in a single transaction.
-    Rolls back and raises on failure — caller should mark document rejected.
-    Each chunk dict must have: text, embedding, metadata, section_path, page_start, page_end, token_count.
-    """
+async def insert_chunks(
+    document_id: uuid.UUID, chunks: list[dict], pool: Pool
+) -> None:
     async with pool.acquire() as conn:
         async with conn.transaction():
-            await conn.executemany(
-                """
-                INSERT INTO chunks
-                    (document_id, text, embedding, metadata, section_path, page_start, page_end, token_count)
-                VALUES ($1, $2, $3::vector, $4::jsonb, $5, $6, $7, $8)
-                """,
-                [
-                    (
-                        document_id,
-                        c["text"],
-                        str(c["embedding"]),
-                        __import__("json").dumps(c["metadata"]),
-                        c["section_path"],
-                        c["page_start"],
-                        c["page_end"],
-                        c["token_count"],
-                    )
-                    for c in chunks
-                ],
-            )
+            for c in chunks:
+                embedding_str = "[" + ",".join(str(x) for x in c["embedding"]) + "]"
+                metadata = json.dumps({
+                    "keywords": c.get("keywords", []),
+                    "language": c.get("language", "en"),
+                    "quality_score": c.get("quality_score", 0.0),
+                })
+                await conn.execute(
+                    "INSERT INTO chunks"
+                    " (document_id, text, embedding, metadata, section_path,"
+                    "  page_start, page_end, token_count)"
+                    " VALUES ($1, $2, $3::vector, $4::jsonb, $5, $6, $7, $8)",
+                    document_id,
+                    c["text"],
+                    embedding_str,
+                    metadata,
+                    c.get("section_path", []),
+                    c.get("page_start"),
+                    c.get("page_end"),
+                    c.get("token_count"),
+                )
+
+
+async def get_document_by_id(document_id: uuid.UUID, pool: Pool) -> dict | None:
+    row = await pool.fetchrow("SELECT * FROM documents WHERE id = $1", document_id)
+    return dict(row) if row else None
+
+
+async def list_documents(pool: Pool) -> list[dict]:
+    rows = await pool.fetch("SELECT * FROM documents ORDER BY processed_at DESC")
+    return [dict(r) for r in rows]

@@ -1,37 +1,32 @@
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from pathlib import Path
+
+import asyncpg
+from asyncpg import Pool
 
 from shared.config.settings import settings
 
-_engine: AsyncEngine | None = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+_pool: Pool | None = None
 
 
-def _async_url(url: str) -> str:
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return url
+async def get_pool() -> Pool:
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(settings.database_url, min_size=2, max_size=10)
+    return _pool
 
 
-async def init_engine() -> None:
-    global _engine, _session_factory
-    _engine = create_async_engine(_async_url(settings.database_url), pool_size=5, max_overflow=10)
-    _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
+async def close_pool() -> None:
+    global _pool
+    if _pool is not None:
+        await _pool.close()
+        _pool = None
 
 
-async def close_engine() -> None:
-    global _engine, _session_factory
-    if _engine is not None:
-        await _engine.dispose()
-        _engine = None
-        _session_factory = None
-
-
-@asynccontextmanager
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    if _session_factory is None:
-        raise RuntimeError("Database engine not initialized — call init_engine() first")
-    async with _session_factory() as session:
-        yield session
+async def run_migrations() -> None:
+    pool = await get_pool()
+    migrations_file = Path(__file__).parent / "migrations" / "001_initial.sql"
+    sql = migrations_file.read_text()
+    async with pool.acquire() as conn:
+        await conn.execute(sql)
