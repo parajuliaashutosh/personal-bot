@@ -13,13 +13,10 @@ class DocumentStatus(str, Enum):
     processing = "processing"
     ready = "ready"
     rejected = "rejected"
+    failed = "failed"
 
 
 # ── Ingestion ─────────────────────────────────────────────────────────────────
-
-class IngestRequest(BaseModel):
-    file_path: str
-
 
 class DocumentOut(BaseModel):
     id: uuid.UUID
@@ -28,6 +25,7 @@ class DocumentOut(BaseModel):
     file_path: str
     status: DocumentStatus
     rejection_reason: str | None = None
+    retry_count: int = 0
     page_count: int | None = None
     processed_at: datetime | None = None
 
@@ -42,17 +40,26 @@ class ChunkMetadata(BaseModel):
     extra: dict[str, Any] = Field(default_factory=dict)
 
 
-# ── Session / Memory ──────────────────────────────────────────────────────────
+# ── Session / Chat ─────────────────────────────────────────────────────────────
 
 class SessionCreate(BaseModel):
-    user_agent: str | None = None
-    ip: str | None = None
+    document_id: uuid.UUID | None = None
 
 
-class SessionOut(BaseModel):
-    id: uuid.UUID
-    created_at: datetime
+class SessionResponse(BaseModel):
+    session_id: uuid.UUID
 
+
+class ChatRequest(BaseModel):
+    query: str
+
+
+class SSEToken(BaseModel):
+    token: str | None = None
+    done: bool = False
+
+
+# ── Internal pipeline ─────────────────────────────────────────────────────────
 
 class MessageCreate(BaseModel):
     session_id: uuid.UUID
@@ -60,18 +67,3 @@ class MessageCreate(BaseModel):
     content: str
     retrieved_chunk_ids: list[uuid.UUID] = Field(default_factory=list)
     rerank_scores: dict[str, Any] | None = None
-
-
-# ── Retrieval ─────────────────────────────────────────────────────────────────
-
-class QueryRequest(BaseModel):
-    session_id: uuid.UUID
-    query: str
-    document_id: uuid.UUID | None = None
-
-
-class QueryResponse(BaseModel):
-    answer: str
-    session_id: uuid.UUID
-    retrieved_chunk_ids: list[uuid.UUID] = Field(default_factory=list)
-    low_confidence: bool = False

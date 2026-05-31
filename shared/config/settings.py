@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str
 
+    # RabbitMQ
+    rabbitmq_url: str
+
     # LLM provider
     llm_provider: str = "gemini"  # "gemini" | "ollama"
 
@@ -28,6 +31,7 @@ class Settings(BaseSettings):
     max_pages: int = 500
     pdf_dir: str = "pdfs"
     embed_batch_size: int = 20
+    max_retries: int = 3
 
     # Retrieval limits
     context_token_limit: int = 3000

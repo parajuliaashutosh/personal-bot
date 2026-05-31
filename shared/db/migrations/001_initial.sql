@@ -5,8 +5,9 @@ CREATE TABLE IF NOT EXISTS documents (
     sha256 TEXT NOT NULL UNIQUE,
     filename TEXT NOT NULL,
     file_path TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
+    status TEXT NOT NULL DEFAULT 'pending',  -- pending | processing | ready | rejected | failed
     rejection_reason TEXT,
+    retry_count INT NOT NULL DEFAULT 0,
     page_count INT,
     processed_at TIMESTAMPTZ DEFAULT now()
 );
@@ -26,12 +27,14 @@ CREATE TABLE IF NOT EXISTS chunks (
 
 CREATE TABLE IF NOT EXISTS sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id UUID REFERENCES documents(id) ON DELETE SET NULL,
     user_agent TEXT,
     ip TEXT,
     ip_country TEXT,
     ip_city TEXT,
-    ip_isp TEXT,
+    ip_region TEXT,
     ip_asn TEXT,
+    ip_timezone TEXT,
     geo_looked_up_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
     last_active TIMESTAMPTZ DEFAULT now()
@@ -40,17 +43,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    role TEXT NOT NULL,
+    role TEXT NOT NULL,              -- 'user' | 'assistant'
     content TEXT NOT NULL,
     retrieved_chunk_ids UUID[],
     rerank_scores JSONB,
     created_at TIMESTAMPTZ DEFAULT now()
 );
-
-CREATE INDEX IF NOT EXISTS chunks_embedding_idx ON chunks USING hnsw (embedding vector_cosine_ops);
-CREATE INDEX IF NOT EXISTS chunks_metadata_idx ON chunks USING gin (metadata);
-CREATE INDEX IF NOT EXISTS chunks_document_id_idx ON chunks (document_id);
-CREATE INDEX IF NOT EXISTS messages_session_created_idx ON messages (session_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,3 +56,9 @@ CREATE TABLE IF NOT EXISTS api_keys (
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS chunks_embedding_idx ON chunks USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS chunks_metadata_idx ON chunks USING gin (metadata);
+CREATE INDEX IF NOT EXISTS chunks_document_id_idx ON chunks (document_id);
+CREATE INDEX IF NOT EXISTS messages_session_created_idx ON messages (session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS sessions_created_idx ON sessions (created_at DESC);

@@ -1,0 +1,22 @@
+from dataclasses import dataclass, field
+
+# Error code constants
+PDF_NOT_FOUND = "PDF_NOT_FOUND"
+PDF_ENCRYPTED = "PDF_ENCRYPTED"
+PDF_TOO_LARGE = "PDF_TOO_LARGE"
+PDF_NO_TEXT = "PDF_NO_TEXT"
+PDF_DUPLICATE = "PDF_DUPLICATE"
+PDF_UNREADABLE = "PDF_UNREADABLE"
+PDF_PAGE_COUNT = "PDF_PAGE_COUNT"
+SESSION_NOT_FOUND = "SESSION_NOT_FOUND"
+SESSION_INVALID_ID = "SESSION_INVALID_ID"
+QUERY_TOO_LONG = "QUERY_TOO_LONG"
+QUERY_INJECTION = "QUERY_INJECTION"
+INTERNAL_ERROR = "INTERNAL_ERROR"
+
+
+@dataclass
+class AppError:
+    code: str
+    message: str
+    details: dict | None = field(default=None)

@@ -1,15 +1,17 @@
 import hashlib
 
-from asyncpg import Pool
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def hash_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode()).hexdigest()
 
 
-async def validate_key(raw_key: str, pool: Pool) -> bool:
+async def validate_key(raw_key: str, session: AsyncSession) -> bool:
     hashed = hash_key(raw_key)
-    row = await pool.fetchrow(
-        "SELECT 1 FROM api_keys WHERE key_hash = $1 AND active = TRUE", hashed
+    result = await session.execute(
+        text("SELECT 1 FROM api_keys WHERE key_hash = :hash AND active = TRUE"),
+        {"hash": hashed},
     )
-    return row is not None
+    return result.first() is not None
