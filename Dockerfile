@@ -1,28 +1,32 @@
+# ── build stage ──────────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+COPY pyproject.toml .
+RUN uv pip install --system --no-cache -r pyproject.toml
+
+# ── runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+# non-root user
+RUN adduser --disabled-password --gecos "" appuser
 
-# Cache dependency installation separately from app code
-COPY pyproject.toml .
-RUN pip install --no-cache-dir --no-build-isolation \
-    $(python -c "import tomllib; data=tomllib.load(open('pyproject.toml','rb')); print(' '.join(data.get('project',{}).get('dependencies',[])))")
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Now copy source code
-COPY . .
+COPY app/ app/
+COPY ingestion/ ingestion/
+COPY retrieval/ retrieval/
+COPY shared/ shared/
 
-# Install the package itself (no -e)
-RUN pip install --no-cache-dir .
-
-RUN mkdir -p chroma_db data
+USER appuser
 
 EXPOSE 8000
 
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
