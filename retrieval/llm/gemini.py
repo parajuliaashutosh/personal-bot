@@ -23,10 +23,12 @@ async def generate(
     ]
     contents.append({"role": "user", "parts": [{"text": prompt}]})
 
-    async for chunk in _client.aio.models.generate_content_stream(
+    stream = await _client.aio.models.generate_content_stream(
         model=settings.gemini_model,
         contents=contents,
-    ):
+    )
+
+    async for chunk in stream:
         if chunk.text:
             yield chunk.text
 
