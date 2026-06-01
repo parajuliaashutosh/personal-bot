@@ -5,7 +5,7 @@ description = "Production-grade RAG API — PDF ingestion + natural language ret
 requires-python = ">=3.11"
 
 dependencies = [
-  "fastapi>=0.115.0",
+  "fastapi[standard]>=0.115.0",
   "uvicorn[standard]>=0.30.0",
   "asyncpg>=0.30.0",
   "pymupdf>=1.24.0",
