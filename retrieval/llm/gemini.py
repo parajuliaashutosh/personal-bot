@@ -37,7 +37,10 @@ async def embed(texts: list[str]) -> list[list[float]]:
         response = await _client.aio.models.embed_content(
             model=settings.gemini_embed_model,
             contents=text,
-            config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_DOCUMENT",
+                output_dimensionality=settings.embed_dimensions,
+            ),
         )
         results.append(list(response.embeddings[0].values))
     return results

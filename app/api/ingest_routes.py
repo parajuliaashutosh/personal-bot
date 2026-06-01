@@ -123,8 +123,10 @@ async def process_one(filename: str, request: Request):
     target = next((f for f in eligible if f["filename"] == filename), None)
     if target is None:
         if filename in skipped:
-            raise HTTPException(status_code=409, detail={"code": "ALREADY_PROCESSED", "message": f"{filename} is already ready or processing"})
-        raise HTTPException(status_code=404, detail={"code": "PDF_NOT_FOUND", "message": f"{filename} not found or not eligible"})
+            raise HTTPException(status_code=409, detail={
+                                "code": "ALREADY_PROCESSED", "message": f"{filename} is already ready or processing"})
+        raise HTTPException(status_code=404, detail={
+                            "code": "PDF_NOT_FOUND", "message": f"{filename} not found or not eligible"})
 
     async def generate():
         async for event in _process_files([target], pool, embed_fn):
@@ -138,7 +140,8 @@ async def get_status(document_id: uuid.UUID, request: Request):
     pool = request.app.state.pool
     doc = await get_document_by_id(document_id, pool)
     if not doc:
-        raise HTTPException(status_code=404, detail={"code": "DOCUMENT_NOT_FOUND", "message": "Document not found"})
+        raise HTTPException(status_code=404, detail={
+                            "code": "DOCUMENT_NOT_FOUND", "message": "Document not found"})
     return doc
 
 

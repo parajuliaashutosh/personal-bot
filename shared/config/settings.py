@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     gemini_embed_model: str = "text-embedding-004"
+    embed_dimensions: int = 768  # must match vector(N) in DB schema
 
     # Ollama
     ollama_base_url: str = "http://localhost:11434"
