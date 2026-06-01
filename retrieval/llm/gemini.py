@@ -1,31 +1,32 @@
 from __future__ import annotations
 
-import asyncio
 from typing import AsyncIterator
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from shared.config.settings import settings
 
-genai.configure(api_key=settings.gemini_api_key)
-
-_chat_model = genai.GenerativeModel(settings.gemini_model)
+_client = genai.Client(api_key=settings.gemini_api_key)
 
 
 async def generate(
     prompt: str,
     history: list[dict[str, str]],
 ) -> AsyncIterator[str]:
-    gemini_history = [
-        {"role": "model" if m["role"] == "assistant" else "user", "parts": [m["content"]]}
+    contents: list[dict] = [
+        {
+            "role": "model" if m["role"] == "assistant" else "user",
+            "parts": [{"text": m["content"]}],
+        }
         for m in history
     ]
-    chat = _chat_model.start_chat(history=gemini_history)
+    contents.append({"role": "user", "parts": [{"text": prompt}]})
 
-    response = await asyncio.to_thread(
-        lambda: chat.send_message(prompt, stream=True)
-    )
-    for chunk in response:
+    async for chunk in _client.aio.models.generate_content_stream(
+        model=settings.gemini_model,
+        contents=contents,
+    ):
         if chunk.text:
             yield chunk.text
 
@@ -33,12 +34,10 @@ async def generate(
 async def embed(texts: list[str]) -> list[list[float]]:
     results: list[list[float]] = []
     for text in texts:
-        result = await asyncio.to_thread(
-            lambda t=text: genai.embed_content(
-                model=f"models/{settings.gemini_embed_model}",
-                content=t,
-                task_type="retrieval_document",
-            )
+        response = await _client.aio.models.embed_content(
+            model=settings.gemini_embed_model,
+            contents=text,
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
         )
-        results.append(result["embedding"])
+        results.append(list(response.embeddings[0].values))
     return results
