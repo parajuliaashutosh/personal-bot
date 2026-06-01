@@ -1,11 +1,26 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    # Database
-    database_url: str
+    # Database — accepts either DATABASE_URL or individual parts
+    database_url: str = ""
+    db_user: str = "postgres"
+    db_password: str = "postgres"
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "personal_chatbot"
+
+    @model_validator(mode="after")
+    def build_database_url(self) -> "Settings":
+        if not self.database_url:
+            self.database_url = (
+                f"postgresql://{self.db_user}:{self.db_password}"
+                f"@{self.db_host}:{self.db_port}/{self.db_name}"
+            )
+        return self
 
     # LLM provider
     llm_provider: str = "gemini"  # "gemini" | "ollama"
