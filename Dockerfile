@@ -1,29 +1,26 @@
-# ── build stage ──────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+# ── build stage ───────────────────────────────────────────────────────────────
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
 
 WORKDIR /app
 
-# install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
-COPY pyproject.toml .
-RUN uv pip install --system --no-cache -r pyproject.toml
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# non-root user
 RUN adduser --disabled-password --gecos "" appuser
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY app/ app/
 COPY ingestion/ ingestion/
 COPY retrieval/ retrieval/
 COPY shared/ shared/
+COPY pdfs/ pdfs/
 
 USER appuser
 
