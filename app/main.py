@@ -27,6 +27,11 @@ async def lifespan(app: FastAPI):
     else:
         from retrieval.llm.ollama import embed, generate  # type: ignore[no-redef]
 
+    if settings.llm_fallback_provider == "openrouter" and settings.openrouter_api_key:
+        from retrieval.llm.fallback import with_fallback
+        from retrieval.llm.openrouter import generate as _openrouter_generate
+        generate = with_fallback(generate, _openrouter_generate)  # type: ignore[assignment]
+
     app.state.pool = pool
     app.state.generate_fn = generate
     app.state.embed_fn = embed

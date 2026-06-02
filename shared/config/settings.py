@@ -24,12 +24,17 @@ class Settings(BaseSettings):
 
     # LLM provider
     llm_provider: str = "gemini"  # "gemini" | "ollama"
+    llm_fallback_provider: str = ""  # "openrouter" — used when primary is unavailable
 
     # Gemini
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     gemini_embed_model: str = "text-embedding-004"
     embed_dimensions: int = 768  # must match vector(N) in DB schema
+
+    # OpenRouter (fallback)
+    openrouter_api_key: str = ""
+    openrouter_model: str = "google/gemini-2.0-flash-001"
 
     # Ollama
     ollama_base_url: str = "http://localhost:11434"
