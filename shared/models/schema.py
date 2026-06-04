@@ -43,7 +43,7 @@ class ChunkMetadata(BaseModel):
 # ── Session / Chat ─────────────────────────────────────────────────────────────
 
 class SessionCreate(BaseModel):
-    document_id: uuid.UUID | None = None
+    pass
 
 
 class SessionResponse(BaseModel):

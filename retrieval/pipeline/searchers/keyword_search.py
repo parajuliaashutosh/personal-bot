@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import uuid
 
 from asyncpg import Pool
 
@@ -16,7 +15,6 @@ def _meta(value) -> dict:
 
 async def keyword_search(
     keywords: list[str],
-    document_id: uuid.UUID | None,
     limit: int,
     pool: Pool,
 ) -> list[dict]:
@@ -25,25 +23,14 @@ async def keyword_search(
 
     query_str = " ".join(keywords)
 
-    if document_id:
-        rows = await pool.fetch(
-            "SELECT id, document_id, text, section_path, page_start, page_end, token_count, metadata,"
-            "       ts_rank(to_tsvector('english', text), plainto_tsquery('english', $1)) AS score"
-            " FROM chunks"
-            " WHERE document_id = $2"
-            "   AND to_tsvector('english', text) @@ plainto_tsquery('english', $1)"
-            " ORDER BY score DESC LIMIT $3",
-            query_str, document_id, limit,
-        )
-    else:
-        rows = await pool.fetch(
-            "SELECT id, document_id, text, section_path, page_start, page_end, token_count, metadata,"
-            "       ts_rank(to_tsvector('english', text), plainto_tsquery('english', $1)) AS score"
-            " FROM chunks"
-            " WHERE to_tsvector('english', text) @@ plainto_tsquery('english', $1)"
-            " ORDER BY score DESC LIMIT $2",
-            query_str, limit,
-        )
+    rows = await pool.fetch(
+        "SELECT id, document_id, text, section_path, page_start, page_end, token_count, metadata,"
+        "       ts_rank(to_tsvector('english', text), plainto_tsquery('english', $1)) AS score"
+        " FROM chunks"
+        " WHERE to_tsvector('english', text) @@ plainto_tsquery('english', $1)"
+        " ORDER BY score DESC LIMIT $2",
+        query_str, limit,
+    )
 
     return [
         {

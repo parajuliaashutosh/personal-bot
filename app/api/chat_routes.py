@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import uuid
-
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
@@ -26,17 +24,15 @@ from retrieval.pipeline.ranker import rank
 from retrieval.pipeline.reranker import rerank
 from retrieval.pipeline.searchers.keyword_search import keyword_search
 from retrieval.pipeline.searchers.memory_search import memory_search
-from retrieval.pipeline.searchers.metadata_search import metadata_search
 from retrieval.pipeline.searchers.vector_search import vector_search
 from shared.config.settings import settings
-from shared.models.schema import ChatRequest, SessionCreate
+from shared.models.schema import ChatRequest
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.post("/session", status_code=201)
 async def create_chat_session(
-    body: SessionCreate,
     request: Request,
     background_tasks: BackgroundTasks,
 ):
@@ -44,14 +40,14 @@ async def create_chat_session(
     ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
 
-    session_id = await create_session(ip, user_agent, body.document_id, pool)
+    session_id = await create_session(ip, user_agent, pool)
 
     if ip and settings.ipinfo_api_key:
         background_tasks.add_task(enrich_session_geo, str(session_id), ip, pool)
 
     response = JSONResponse(
         status_code=201,
-        content={"session_id": str(session_id)},
+        content={"success": True, "message": "session created", "data": {"session_id": str(session_id)}},
     )
     response.headers["X-Session-Id"] = str(session_id)
     return response
@@ -67,7 +63,6 @@ async def chat(body: ChatRequest, request: Request):
 
     # ── Session resolution ────────────────────────────────────────────────────
     raw_session_id = request.headers.get("X-Session-Id")
-    document_id: uuid.UUID | None = None
 
     if raw_session_id:
         if not validate_session_id(raw_session_id):
@@ -82,11 +77,10 @@ async def chat(body: ChatRequest, request: Request):
                 detail={"code": "SESSION_NOT_FOUND", "message": "Session not found"},
             )
         session_id = raw_session_id
-        document_id = session.get("document_id")
     else:
         ip = request.client.host if request.client else None
         ua = request.headers.get("user-agent")
-        new_id = await create_session(ip, ua, None, pool)
+        new_id = await create_session(ip, ua, pool)
         session_id = str(new_id)
 
     # ── Sanitize ──────────────────────────────────────────────────────────────
@@ -105,23 +99,22 @@ async def chat(body: ChatRequest, request: Request):
     embeddings = await embed_fn(all_queries[:2])
 
     vector_batches = await asyncio.gather(
-        *[vector_search(emb, document_id, 20, pool) for emb in embeddings]
+        *[vector_search(emb, 20, pool) for emb in embeddings]
     )
     vector_results = [chunk for batch in vector_batches for chunk in batch]
 
-    kw_results, meta_results, mem_results = await asyncio.gather(
-        keyword_search(query_ctx["keywords"], document_id, 20, pool),
-        metadata_search({"document_id": document_id} if document_id else {}, pool),
+    kw_results, mem_results = await asyncio.gather(
+        keyword_search(query_ctx["keywords"], 20, pool),
         memory_search(session_id, pool),
     )
 
-    candidates = merge(vector_results + kw_results + meta_results + mem_results)
+    candidates = merge(vector_results + kw_results + mem_results)
     ranked = rank(candidates, query_ctx)
     reranked = await rerank(clean_query, ranked[:20], generate_fn)
 
     context_str = build_context(reranked, settings.context_token_limit)
     history = await fetch_last_3(session_id, pool)
-    prompt = build_prompt(clean_query, context_str)
+    prompt = build_prompt(clean_query, context_str, request.app.state.persona_text)
 
     chunk_ids = [c["id"] for c in reranked]
 
@@ -131,10 +124,10 @@ async def chat(body: ChatRequest, request: Request):
         try:
             async for token in generate_fn(prompt, history):
                 tokens.append(token)
-                yield json.dumps({"token": token})
+                yield json.dumps({"success": True, "message": "token", "data": token})
         finally:
             full_answer = "".join(tokens)
-            yield json.dumps({"done": True})
+            yield json.dumps({"success": True, "message": "done", "data": None})
 
             if full_answer:
                 await save_message(session_id, "user", clean_query, [], None, pool)

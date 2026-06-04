@@ -8,11 +8,12 @@ logger = logging.getLogger(__name__)
 _RETRYABLE_SUBSTRINGS = (
     "429",
     "quota",
-    "resource exhausted",
+    "exhausted",
     "service unavailable",
     "503",
     "overloaded",
     "rate limit",
+    "too many requests",
 )
 
 GenerateFn = Callable[..., AsyncIterator[str]]

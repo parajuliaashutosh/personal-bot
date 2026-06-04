@@ -26,7 +26,8 @@ async def close_pool() -> None:
 
 async def run_migrations() -> None:
     pool = await get_pool()
-    migrations_file = Path(__file__).parent / "migrations" / "001_initial.sql"
-    sql = migrations_file.read_text()
+    migrations_dir = Path(__file__).parent / "migrations"
     async with pool.acquire() as conn:
-        await conn.execute(sql)
+        for migration in sorted(migrations_dir.glob("*.sql")):
+            sql = migration.read_text()
+            await conn.execute(sql)

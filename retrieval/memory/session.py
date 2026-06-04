@@ -23,15 +23,13 @@ def validate_session_id(session_id: str) -> bool:
 async def create_session(
     ip: str | None,
     user_agent: str | None,
-    document_id: UUID | None,
     pool: Pool,
 ) -> UUID:
     row = await pool.fetchrow(
-        "INSERT INTO sessions (ip, user_agent, document_id)"
-        " VALUES ($1, $2, $3) RETURNING id",
+        "INSERT INTO sessions (ip, user_agent)"
+        " VALUES ($1, $2) RETURNING id",
         ip,
         user_agent,
-        document_id,
     )
     return row["id"]
 

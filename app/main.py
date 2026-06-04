@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
@@ -22,15 +23,35 @@ async def lifespan(app: FastAPI):
     pool = await get_pool()
     await run_migrations()
 
-    if settings.llm_provider == "gemini":
-        from retrieval.llm.gemini import embed, generate
+    # Embed: gemini preferred (if key present), else ollama
+    if settings.gemini_api_key:
+        from retrieval.llm.gemini import embed
     else:
-        from retrieval.llm.ollama import embed, generate  # type: ignore[no-redef]
+        from retrieval.llm.ollama import embed  # type: ignore[no-redef]
 
-    if settings.llm_fallback_provider == "openrouter" and settings.openrouter_api_key:
-        from retrieval.llm.fallback import with_fallback
-        from retrieval.llm.openrouter import generate as _openrouter_generate
-        generate = with_fallback(generate, _openrouter_generate)  # type: ignore[assignment]
+    # Build generate chain: primary → github_models → gemini (each skipped if key absent)
+    from retrieval.llm.fallback import with_fallback
+
+    _providers = []
+    if settings.llm_provider == "openrouter" and settings.openrouter_api_key:
+        from retrieval.llm.openrouter import generate as _g
+        _providers.append(_g)
+    if settings.github_models_token:
+        from retrieval.llm.github_models import generate as _gh  # type: ignore[no-redef]
+        _providers.append(_gh)
+    if settings.gemini_api_key:
+        from retrieval.llm.gemini import generate as _gm  # type: ignore[no-redef]
+        _providers.append(_gm)
+    if not _providers or settings.llm_provider == "ollama":
+        from retrieval.llm.ollama import generate as _ol  # type: ignore[no-redef]
+        _providers.append(_ol)
+
+    generate = _providers[-1]
+    for _p in reversed(_providers[:-1]):
+        generate = with_fallback(_p, generate)  # type: ignore[assignment]
+
+    row = await pool.fetchrow("SELECT raw_text FROM persona WHERE id = 1")
+    app.state.persona_text = row["raw_text"] if row else ""
 
     app.state.pool = pool
     app.state.generate_fn = generate
@@ -47,6 +68,15 @@ app = FastAPI(title="Personal RAG API", lifespan=lifespan)
 app.middleware("http")(error_middleware)
 app.middleware("http")(logging_middleware)
 app.middleware("http")(apikey_middleware)
+
+# CORS must be registered last so it becomes outermost and handles preflight before any other middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "HEAD", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization", "Accept"],
+)
 
 app.include_router(ingest_routes.router)
 app.include_router(chat_routes.router)

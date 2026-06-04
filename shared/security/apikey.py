@@ -41,7 +41,7 @@ def validate_key_for_route(raw_key: str | None, path: str) -> tuple[bool, int]:
         return False, 403
 
     if route == "chat":
-        if raw_key == settings.api_key:
+        if raw_key in (settings.api_key, settings.admin_key):
             return True, 200
         return False, 403
 

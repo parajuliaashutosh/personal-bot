@@ -22,21 +22,24 @@ class Settings(BaseSettings):
             )
         return self
 
-    # LLM provider
-    llm_provider: str = "gemini"  # "gemini" | "ollama"
-    llm_fallback_provider: str = ""  # "openrouter" — used when primary is unavailable
+    # LLM provider — chain: primary → github_models → gemini (each skipped if key absent)
+    llm_provider: str = "openrouter"  # "openrouter" | "gemini" | "ollama"
 
-    # Gemini
+    # Gemini (embed always uses this when key present; fallback for generate)
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     gemini_embed_model: str = "text-embedding-004"
     embed_dimensions: int = 768  # must match vector(N) in DB schema
 
-    # OpenRouter (fallback)
+    # OpenRouter (primary generate)
     openrouter_api_key: str = ""
-    openrouter_model: str = "google/gemini-2.0-flash-001"
+    openrouter_model: str = "meta-llama/llama-3.3-70b-instruct"
 
-    # Ollama
+    # GitHub Models (secondary generate fallback)
+    github_models_token: str = ""
+    github_models_model: str = "Meta-Llama-3.1-8B-Instruct"
+
+    # Ollama (local fallback for both embed and generate)
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"
     ollama_embed_model: str = "nomic-embed-text"
@@ -44,6 +47,9 @@ class Settings(BaseSettings):
     # Security — two route-scoped keys
     api_key: str       # valid on /chat/* only
     admin_key: str     # valid on /ingest/* and /admin/* only
+
+    # CORS
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     # Geo enrichment (optional)
     ipinfo_api_key: str = ""

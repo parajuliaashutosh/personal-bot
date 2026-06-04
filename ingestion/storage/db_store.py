@@ -28,12 +28,12 @@ async def get_eligible_files(
     pdf_dir: str, pool: Pool
 ) -> tuple[list[EligibleFile], list[str]]:
     dir_path = Path(pdf_dir)
-    pdfs = list(dir_path.glob("*.pdf"))
+    files = list(dir_path.glob("*.pdf")) + list(dir_path.glob("*.md"))
 
-    if not pdfs:
+    if not files:
         return [], []
 
-    hashes = {_sha256(p): p for p in pdfs}
+    hashes = {_sha256(p): p for p in files}
     rows = await pool.fetch(
         "SELECT sha256, status FROM documents WHERE sha256 = ANY($1::text[])",
         list(hashes.keys()),
@@ -120,6 +120,10 @@ async def insert_chunks(
                     c.get("page_end"),
                     c.get("token_count"),
                 )
+
+
+async def delete_document_by_sha256(sha256: str, pool: Pool) -> None:
+    await pool.execute("DELETE FROM documents WHERE sha256 = $1", sha256)
 
 
 async def get_document_by_id(document_id: uuid.UUID, pool: Pool) -> dict | None:

@@ -7,6 +7,9 @@ from shared.security.apikey import validate_key_for_route
 
 
 async def apikey_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     raw_key = request.headers.get("X-API-Key")
     valid, status = validate_key_for_route(raw_key, request.url.path)
 
