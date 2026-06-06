@@ -28,6 +28,13 @@ async def run_migrations() -> None:
     pool = await get_pool()
     migrations_dir = Path(__file__).parent / "migrations"
     async with pool.acquire() as conn:
+        await conn.execute(
+            "CREATE TABLE IF NOT EXISTS _migrations "
+            "(name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT now())"
+        )
+        applied = {r["name"] for r in await conn.fetch("SELECT name FROM _migrations")}
         for migration in sorted(migrations_dir.glob("*.sql")):
-            sql = migration.read_text()
-            await conn.execute(sql)
+            if migration.name in applied:
+                continue
+            await conn.execute(migration.read_text())
+            await conn.execute("INSERT INTO _migrations (name) VALUES ($1)", migration.name)
