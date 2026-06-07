@@ -15,7 +15,8 @@ from app.middleware.logging_middleware import logging_middleware
 from shared.config.settings import settings
 from shared.db.postgres import close_pool, get_pool, run_migrations
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager
@@ -37,13 +38,16 @@ async def lifespan(app: FastAPI):
         from retrieval.llm.openrouter import generate as _g
         _providers.append(_g)
     if settings.github_models_token:
-        from retrieval.llm.github_models import generate as _gh  # type: ignore[no-redef]
+        # type: ignore[no-redef]
+        from retrieval.llm.github_models import generate as _gh
         _providers.append(_gh)
     if settings.gemini_api_key:
-        from retrieval.llm.gemini import generate as _gm  # type: ignore[no-redef]
+        # type: ignore[no-redef]
+        from retrieval.llm.gemini import generate as _gm
         _providers.append(_gm)
     if not _providers or settings.llm_provider == "ollama":
-        from retrieval.llm.ollama import generate as _ol  # type: ignore[no-redef]
+        # type: ignore[no-redef]
+        from retrieval.llm.ollama import generate as _ol
         _providers.append(_ol)
 
     generate = _providers[-1]
@@ -62,7 +66,8 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(title="Personal RAG API", lifespan=lifespan)
+app = FastAPI(title="Personal RAG API",
+              lifespan=lifespan, redirect_slashes=False)
 
 # Middleware — last registered = outermost (first to handle requests)
 app.middleware("http")(error_middleware)
@@ -98,7 +103,8 @@ async def health(request: Request):
 def _custom_openapi() -> dict:
     if app.openapi_schema:
         return app.openapi_schema
-    schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+    schema = get_openapi(
+        title=app.title, version=app.version, routes=app.routes)
     schema.setdefault("components", {})
     schema["components"]["securitySchemes"] = {
         "ApiKeyHeader": {
