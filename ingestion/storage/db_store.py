@@ -134,3 +134,43 @@ async def get_document_by_id(document_id: uuid.UUID, pool: Pool) -> dict | None:
 async def list_documents(pool: Pool) -> list[dict]:
     rows = await pool.fetch("SELECT * FROM documents ORDER BY processed_at DESC")
     return [dict(r) for r in rows]
+
+
+async def purge_all_documents(pool: Pool) -> tuple[int, int]:
+    """Delete all documents (chunks cascade). Returns (doc_count, chunk_count) before deletion."""
+    counts = await pool.fetchrow(
+        "SELECT COUNT(*)::int AS docs, "
+        "(SELECT COUNT(*)::int FROM chunks) AS chunks "
+        "FROM documents"
+    )
+    await pool.execute("DELETE FROM documents")
+    return counts["docs"], counts["chunks"]
+
+
+async def create_ingest_run(file_names: list[str], pool: Pool) -> uuid.UUID:
+    row = await pool.fetchrow(
+        "INSERT INTO ingest_runs (file_names) VALUES ($1) RETURNING id",
+        file_names,
+    )
+    return row["id"]
+
+
+async def complete_ingest_run(
+    run_id: uuid.UUID,
+    pool: Pool,
+    doc_count: int = 0,
+    chunk_count: int = 0,
+    error: str | None = None,
+) -> None:
+    status = "failed" if error else "completed"
+    await pool.execute(
+        "UPDATE ingest_runs "
+        "SET completed_at = now(), status = $1, doc_count = $2, chunk_count = $3, error = $4 "
+        "WHERE id = $5",
+        status, doc_count, chunk_count, error, run_id,
+    )
+
+
+async def list_ingest_runs(pool: Pool) -> list[dict]:
+    rows = await pool.fetch("SELECT * FROM ingest_runs ORDER BY triggered_at DESC")
+    return [dict(r) for r in rows]
