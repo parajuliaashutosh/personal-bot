@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # Ingestion limits
     max_file_size_mb: int = 50
     max_pages: int = 500
-    pdf_dir: str = "pdfs"
+    pdf_dir: str = "data"
     embed_batch_size: int = 20
 
     # Retrieval limits

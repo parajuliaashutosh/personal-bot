@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
-from retrieval.memory.chat_history import fetch_last_3, save_message
+from app.limiter import limiter
+from retrieval.memory.chat_history import save_message
 from retrieval.memory.session import (
     create_session,
     enrich_session_geo,
@@ -14,17 +14,7 @@ from retrieval.memory.session import (
     update_last_active,
     validate_session_id,
 )
-from retrieval.pipeline.context_builder import build_context
-from retrieval.pipeline.merger import merge
-from retrieval.pipeline.postprocessor import postprocess
-from retrieval.pipeline.prompt_builder import build_prompt
-from retrieval.pipeline.query_expansion import expand_query
-from retrieval.pipeline.query_understanding import understand_query
-from retrieval.pipeline.ranker import rank
-from retrieval.pipeline.reranker import rerank
-from retrieval.pipeline.searchers.keyword_search import keyword_search
-from retrieval.pipeline.searchers.memory_search import memory_search
-from retrieval.pipeline.searchers.vector_search import vector_search
+from retrieval.services.chat_service import build_chat_pipeline
 from shared.config.settings import settings
 from shared.models.schema import ChatRequest
 
@@ -43,17 +33,20 @@ async def create_chat_session(
     session_id = await create_session(ip, user_agent, pool)
 
     if ip and settings.ipinfo_api_key:
-        background_tasks.add_task(enrich_session_geo, str(session_id), ip, pool)
+        background_tasks.add_task(
+            enrich_session_geo, str(session_id), ip, pool)
 
     response = JSONResponse(
         status_code=201,
-        content={"success": True, "message": "session created", "data": {"session_id": str(session_id)}},
+        content={"success": True, "message": "session created",
+                 "data": {"session_id": str(session_id)}},
     )
     response.headers["X-Session-Id"] = str(session_id)
     return response
 
 
 @router.post("/")
+@limiter.limit("2/minute")
 async def chat(body: ChatRequest, request: Request):
     from shared.security.sanitizer import sanitize_query
 
@@ -68,13 +61,15 @@ async def chat(body: ChatRequest, request: Request):
         if not validate_session_id(raw_session_id):
             raise HTTPException(
                 status_code=400,
-                detail={"code": "SESSION_INVALID_ID", "message": "Invalid session ID format"},
+                detail={"code": "SESSION_INVALID_ID",
+                        "message": "Invalid session ID format"},
             )
         session = await get_session(raw_session_id, pool)
         if not session:
             raise HTTPException(
                 status_code=404,
-                detail={"code": "SESSION_NOT_FOUND", "message": "Session not found"},
+                detail={"code": "SESSION_NOT_FOUND",
+                        "message": "Session not found"},
             )
         session_id = raw_session_id
     else:
@@ -83,7 +78,7 @@ async def chat(body: ChatRequest, request: Request):
         new_id = await create_session(ip, ua, pool)
         session_id = str(new_id)
 
-    # ── Sanitize ──────────────────────────────────────────────────────────────
+    # ── Sanitize query ────────────────────────────────────────────────────────
     clean_query, err = sanitize_query(body.query)
     if err:
         raise HTTPException(
@@ -91,30 +86,15 @@ async def chat(body: ChatRequest, request: Request):
             detail={"code": err.code, "message": err.message},
         )
 
-    # ── Retrieval pipeline (all blocking work before streaming) ───────────────
-    query_ctx, _ = await understand_query(clean_query)
-    variations = await expand_query(clean_query, query_ctx, generate_fn)
-
-    all_queries = [clean_query] + variations
-    embeddings = await embed_fn(all_queries[:2])
-
-    vector_batches = await asyncio.gather(
-        *[vector_search(emb, 20, pool) for emb in embeddings]
+    # ── Run retrieval pipeline ────────────────────────────────────────────────
+    reranked, history, prompt = await build_chat_pipeline(
+        clean_query=clean_query,
+        session_id=session_id,
+        pool=pool,
+        generate_fn=generate_fn,
+        embed_fn=embed_fn,
+        persona_text=request.app.state.persona_text,
     )
-    vector_results = [chunk for batch in vector_batches for chunk in batch]
-
-    kw_results, mem_results = await asyncio.gather(
-        keyword_search(query_ctx["keywords"], 20, pool),
-        memory_search(session_id, pool),
-    )
-
-    candidates = merge(vector_results + kw_results + mem_results)
-    ranked = rank(candidates, query_ctx)
-    reranked = await rerank(clean_query, ranked[:20], generate_fn)
-
-    context_str = build_context(reranked, settings.context_token_limit)
-    history = await fetch_last_3(session_id, pool)
-    prompt = build_prompt(clean_query, context_str, request.app.state.persona_text)
 
     chunk_ids = [c["id"] for c in reranked]
 

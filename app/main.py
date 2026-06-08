@@ -7,8 +7,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api import chat_routes, ingest_routes
+from app.limiter import limiter
 from app.middleware.apikey_middleware import apikey_middleware
 from app.middleware.error_middleware import error_middleware
 from app.middleware.logging_middleware import logging_middleware
@@ -69,7 +72,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Personal RAG API",
               lifespan=lifespan, redirect_slashes=False)
 
+def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"success": False, "code": "RATE_LIMITED", "message": "Too many requests. Slow down."},
+    )
+
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+
 # Middleware — last registered = outermost (first to handle requests)
+app.add_middleware(SlowAPIMiddleware)
 app.middleware("http")(error_middleware)
 app.middleware("http")(logging_middleware)
 app.middleware("http")(apikey_middleware)

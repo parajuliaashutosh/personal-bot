@@ -11,13 +11,15 @@ async def apikey_middleware(request: Request, call_next):
         return await call_next(request)
 
     raw_key = request.headers.get("X-API-Key")
+    print("The header api key is: ", raw_key)
     valid, status = validate_key_for_route(raw_key, request.url.path)
 
     if not valid:
         message = "X-API-Key header is required" if status == 401 else "Invalid API key for this route"
         return JSONResponse(
             status_code=status,
-            content={"error": {"code": "UNAUTHORIZED", "message": message, "details": None}},
+            content={"error": {"code": "UNAUTHORIZED",
+                               "message": message, "details": None}},
         )
 
     return await call_next(request)

@@ -42,14 +42,6 @@ class ChunkMetadata(BaseModel):
 
 # ── Session / Chat ─────────────────────────────────────────────────────────────
 
-class SessionCreate(BaseModel):
-    pass
-
-
-class SessionResponse(BaseModel):
-    session_id: uuid.UUID
-
-
 class ChatRequest(BaseModel):
     query: str
 
