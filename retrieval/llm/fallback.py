@@ -29,15 +29,15 @@ def with_fallback(primary: GenerateFn, fallback: GenerateFn) -> GenerateFn:
         prompt: str,
         history: list[dict[str, str]],
     ) -> AsyncIterator[str]:
-        tokens_seen: list[str] = []
+        primary_yielded = False
         failed = False
 
         try:
             async for token in primary(prompt, history):
-                tokens_seen.append(token)
+                primary_yielded = True
                 yield token
         except Exception as exc:
-            if tokens_seen or not _is_retryable(exc):
+            if primary_yielded or not _is_retryable(exc):
                 raise
             failed = True
             logger.warning("Primary LLM unavailable (%s), switching to fallback", exc)

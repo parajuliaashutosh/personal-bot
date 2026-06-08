@@ -10,6 +10,7 @@ from asyncpg import Pool
 from shared.config.settings import settings
 
 logger = logging.getLogger(__name__)
+_geo_client = httpx.AsyncClient(timeout=5.0)
 
 
 def validate_session_id(session_id: str) -> bool:
@@ -58,13 +59,12 @@ async def enrich_session_geo(session_id: str, ip: str | None, pool: Pool) -> Non
         return
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(
-                f"https://ipinfo.io/{ip}",
-                params={"token": settings.ipinfo_api_key},
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await _geo_client.get(
+            f"https://ipinfo.io/{ip}",
+            params={"token": settings.ipinfo_api_key},
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
         await pool.execute(
             "UPDATE sessions"

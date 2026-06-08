@@ -68,6 +68,14 @@ async def lifespan(app: FastAPI):
 
     await close_pool()
 
+    # Close shared HTTP clients
+    from retrieval.llm.openrouter import _client as _or_client
+    from retrieval.llm.github_models import _client as _gh_client
+    from retrieval.llm.ollama import _client as _ol_client, _embed_client as _ol_embed_client
+    from retrieval.memory.session import _geo_client
+    for _c in (_or_client, _gh_client, _ol_client, _ol_embed_client, _geo_client):
+        await _c.aclose()
+
 
 app = FastAPI(title="Personal RAG API",
               lifespan=lifespan, redirect_slashes=False)
