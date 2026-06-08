@@ -25,9 +25,9 @@ def _sha256(path: Path) -> str:
 
 
 async def get_eligible_files(
-    pdf_dir: str, pool: Pool
+    data_dir: str, pool: Pool
 ) -> tuple[list[EligibleFile], list[str]]:
-    dir_path = Path(pdf_dir)
+    dir_path = Path(data_dir)
     files = list(dir_path.glob("*.pdf")) + list(dir_path.glob("*.md"))
 
     if not files:
@@ -48,9 +48,11 @@ async def get_eligible_files(
         if status in ("ready", "processing"):
             skipped.append(path.name)
         elif status in ("rejected", "failed"):
-            eligible.append({"filename": path.name, "file_path": str(path), "sha256": sha, "is_new": False})
+            eligible.append({"filename": path.name, "file_path": str(
+                path), "sha256": sha, "is_new": False})
         else:
-            eligible.append({"filename": path.name, "file_path": str(path), "sha256": sha, "is_new": True})
+            eligible.append({"filename": path.name, "file_path": str(
+                path), "sha256": sha, "is_new": True})
 
     return eligible, skipped
 
@@ -100,7 +102,8 @@ async def insert_chunks(
     async with pool.acquire() as conn:
         async with conn.transaction():
             for c in chunks:
-                embedding_str = "[" + ",".join(str(x) for x in c["embedding"]) + "]"
+                embedding_str = "[" + ",".join(str(x)
+                                               for x in c["embedding"]) + "]"
                 metadata = json.dumps({
                     "keywords": c.get("keywords", []),
                     "language": c.get("language", "en"),

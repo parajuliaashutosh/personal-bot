@@ -14,7 +14,7 @@ router = APIRouter(prefix="/ingest", tags=["ingest"])
 async def process_all(request: Request):
     pool = request.app.state.pool
     embed_fn = request.app.state.embed_fn
-    eligible, skipped = await get_eligible_files(settings.pdf_dir, pool)
+    eligible, skipped = await get_eligible_files(settings.data_dir, pool)
 
     if not eligible:
         return {"queued": [], "skipped": skipped, "failed": []}
@@ -30,7 +30,7 @@ async def process_all(request: Request):
 async def process_one(filename: str, request: Request):
     pool = request.app.state.pool
     embed_fn = request.app.state.embed_fn
-    eligible, skipped = await get_eligible_files(settings.pdf_dir, pool)
+    eligible, skipped = await get_eligible_files(settings.data_dir, pool)
 
     target = next((f for f in eligible if f["filename"] == filename), None)
     if target is None:
@@ -57,7 +57,7 @@ async def reprocess_all(request: Request):
     embed_fn = request.app.state.embed_fn
 
     async def generate():
-        async for event in reprocess_stream(settings.pdf_dir, pool, embed_fn):
+        async for event in reprocess_stream(settings.data_dir, pool, embed_fn):
             yield event
 
     return EventSourceResponse(generate())

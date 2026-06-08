@@ -3,7 +3,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Database — accepts either DATABASE_URL or individual parts
     database_url: str = ""
@@ -49,7 +50,8 @@ class Settings(BaseSettings):
     admin_key: str     # valid on /ingest/* and /admin/* only
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
+    cors_origins: list[str] = [
+        "http://localhost:3000", "http://localhost:3001"]
 
     # Geo enrichment (optional)
     ipinfo_api_key: str = ""
@@ -57,7 +59,7 @@ class Settings(BaseSettings):
     # Ingestion limits
     max_file_size_mb: int = 50
     max_pages: int = 500
-    pdf_dir: str = "data"
+    data_dir: str = "data"
     embed_batch_size: int = 20
 
     # Retrieval limits

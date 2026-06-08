@@ -39,7 +39,7 @@ services:
       IPINFO_API_KEY: ${IPINFO_API_KEY:-}
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
       MAX_PAGES: ${MAX_PAGES:-500}
-      PDF_DIR: pdfs
+      data_dir: data
       EMBED_BATCH_SIZE: ${EMBED_BATCH_SIZE:-20}
       CONTEXT_TOKEN_LIMIT: ${CONTEXT_TOKEN_LIMIT:-3000}
     depends_on:

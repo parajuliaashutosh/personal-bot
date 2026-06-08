@@ -106,7 +106,7 @@ async def process_files(files: list[dict], pool: Pool, embed_fn: Callable) -> As
 
 
 async def reprocess_stream(
-    pdf_dir: str,
+    data_dir: str,
     pool: Pool,
     embed_fn: Callable,
 ) -> AsyncIterator[str]:
@@ -114,7 +114,7 @@ async def reprocess_stream(
 
     # Step 1: Snapshot file list from disk before purge
     all_files_on_disk = [
-        p.name for p in Path(pdf_dir).glob("*") if p.suffix in (".pdf", ".md")
+        p.name for p in Path(data_dir).glob("*") if p.suffix in (".pdf", ".md")
     ]
 
     # Step 2: Purge all existing documents and chunks
@@ -125,7 +125,7 @@ async def reprocess_stream(
     run_id = await create_ingest_run(all_files_on_disk, pool)
 
     # Step 4: Re-scan eligible files (all new after purge)
-    eligible, _ = await get_eligible_files(pdf_dir, pool)
+    eligible, _ = await get_eligible_files(data_dir, pool)
 
     # Step 5: Process each file and stream progress
     total_docs = 0
