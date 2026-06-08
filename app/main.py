@@ -80,10 +80,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Personal RAG API",
               lifespan=lifespan, redirect_slashes=False)
 
+
 def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     return JSONResponse(
         status_code=429,
-        content={"success": False, "code": "RATE_LIMITED", "message": "Too many requests. Slow down."},
+        content={"success": False, "code": "RATE_LIMITED",
+                 "message": "Too many requests. Slow down."},
     )
 
 
@@ -109,7 +111,7 @@ app.include_router(ingest_routes.router)
 app.include_router(chat_routes.router)
 
 
-@app.get("/health", tags=["health"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"])
 async def health(request: Request):
     try:
         pool = request.app.state.pool
