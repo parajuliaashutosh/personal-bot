@@ -1,6 +1,6 @@
 REGISTRY = registry.aashutoshparajuli.com.np
 IMAGE   = portfolio/chatbot
-TAG      = 0.1.5
+TAG      = 0.1.7
 
 FULL_IMAGE = $(REGISTRY)/$(IMAGE):$(TAG)
 
