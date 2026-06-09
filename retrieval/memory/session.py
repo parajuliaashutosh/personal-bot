@@ -25,12 +25,14 @@ async def create_session(
     ip: str | None,
     user_agent: str | None,
     pool: Pool,
+    ip_forwarded_for: str | None = None,
 ) -> UUID:
     row = await pool.fetchrow(
-        "INSERT INTO sessions (ip, user_agent)"
-        " VALUES ($1, $2) RETURNING id",
+        "INSERT INTO sessions (ip, user_agent, ip_forwarded_for)"
+        " VALUES ($1, $2, $3) RETURNING id",
         ip,
         user_agent,
+        ip_forwarded_for,
     )
     return row["id"]
 
@@ -65,6 +67,7 @@ async def enrich_session_geo(session_id: str, ip: str | None, pool: Pool) -> Non
         )
         resp.raise_for_status()
         data = resp.json()
+        logger.info("Response from ipinfo call", data)
 
         await pool.execute(
             "UPDATE sessions"
@@ -79,4 +82,5 @@ async def enrich_session_geo(session_id: str, ip: str | None, pool: Pool) -> Non
             UUID(session_id),
         )
     except Exception as exc:
-        logger.warning("geo enrichment failed for session %s: %s", session_id, exc)
+        logger.warning(
+            "geo enrichment failed for session %s: %s", session_id, exc)

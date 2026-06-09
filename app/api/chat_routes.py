@@ -21,16 +21,26 @@ from shared.models.schema import ChatRequest
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
+def _extract_ip(request: Request) -> tuple[str | None, str | None]:
+    """Return (real_ip, raw_x_forwarded_for). Uses X-Forwarded-For when present."""
+    xff = request.headers.get("X-Forwarded-For")
+    if xff:
+        real_ip = xff.split(",")[0].strip()
+        return real_ip, xff
+    fallback = request.client.host if request.client else None
+    return fallback, None
+
+
 @router.post("/session", status_code=201)
 async def create_chat_session(
     request: Request,
     background_tasks: BackgroundTasks,
 ):
     pool = request.app.state.pool
-    ip = request.client.host if request.client else None
+    ip, xff = _extract_ip(request)
     user_agent = request.headers.get("user-agent")
 
-    session_id = await create_session(ip, user_agent, pool)
+    session_id = await create_session(ip, user_agent, pool, xff)
 
     if ip and settings.ipinfo_api_key:
         background_tasks.add_task(
@@ -73,9 +83,9 @@ async def chat(body: ChatRequest, request: Request):
             )
         session_id = raw_session_id
     else:
-        ip = request.client.host if request.client else None
+        ip, xff = _extract_ip(request)
         ua = request.headers.get("user-agent")
-        new_id = await create_session(ip, ua, pool)
+        new_id = await create_session(ip, ua, pool, xff)
         session_id = str(new_id)
 
     # ── Sanitize query ────────────────────────────────────────────────────────
