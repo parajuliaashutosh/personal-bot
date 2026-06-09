@@ -14,14 +14,17 @@ from ingestion.pipeline.extractor import PageData, extract_pages
 from ingestion.pipeline.filter import filter_chunks
 from ingestion.pipeline.structure import detect_structure
 from ingestion.pipeline.validator import validate_pdf
+from ingestion.services.persona_builder import build_persona
 from ingestion.storage.db_store import (
     complete_ingest_run,
     create_document,
     create_ingest_run,
+    get_corpus_text,
     get_eligible_files,
     insert_chunks,
     purge_all_documents,
     reset_document,
+    seed_persona,
     update_document_status,
 )
 
@@ -109,15 +112,16 @@ async def reprocess_stream(
     data_dir: str,
     pool: Pool,
     embed_fn: Callable,
+    generate_fn: Callable,
 ) -> AsyncIterator[str]:
-    """Purge all docs/chunks, open an audit run, re-ingest everything. Yields SSE-ready JSON strings."""
+    """Purge all docs/chunks/persona, open an audit run, re-ingest, then infer the persona. Yields SSE-ready JSON strings."""
 
     # Step 1: Snapshot file list from disk before purge
     all_files_on_disk = [
         p.name for p in Path(data_dir).glob("*") if p.suffix in (".pdf", ".md")
     ]
 
-    # Step 2: Purge all existing documents and chunks
+    # Step 2: Purge all existing documents, chunks and persona
     prev_docs, prev_chunks = await purge_all_documents(pool)
     yield json.dumps({"stage": "purged", "prev_docs": prev_docs, "prev_chunks": prev_chunks})
 
@@ -139,11 +143,20 @@ async def reprocess_stream(
                 total_docs += 1
                 total_chunks += event.get("chunks", 0)
             yield raw
+
+        # Step 6: Infer the persona from the ingested corpus and seed it
+        if total_chunks:
+            yield json.dumps({"stage": "persona_building"})
+            corpus = await get_corpus_text(pool)
+            persona_text = await build_persona(corpus, generate_fn)
+            if persona_text:
+                await seed_persona(persona_text, pool)
+                yield json.dumps({"stage": "persona_seeded", "chars": len(persona_text)})
     except Exception as exc:
         error = str(exc)
         yield json.dumps({"stage": "error", "error": error})
     finally:
-        # Step 6: Close audit run with final counts
+        # Step 7: Close audit run with final counts
         await complete_ingest_run(run_id, pool, total_docs, total_chunks, error)
         yield json.dumps({
             "stage": "finished",
