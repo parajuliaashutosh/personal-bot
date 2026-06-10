@@ -35,4 +35,4 @@ async def build_persona(
     if not corpus_text.strip():
         return ""
     prompt = _PROMPT.format(corpus=corpus_text)
-    return (await _collect(await generate_fn(prompt, []))).strip()
+    return (await _collect(generate_fn(prompt, []))).strip()
