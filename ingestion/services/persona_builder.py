@@ -3,17 +3,19 @@ from __future__ import annotations
 from typing import AsyncIterator, Callable
 
 _PROMPT = """\
-You are given the full text extracted from one person's documents (CV, bio, project
-write-ups, etc.). Write a concise factual profile of THAT person, to be used as the
-"about this person" reference for a portfolio assistant.
+You are given full text extracted from one person's documents (CV, bio, project write-ups, etc.).
+Extract a minimal identity card for that person — this will be injected into every chat prompt as
+context, so keep it very short (3 lines max).
+
+Include ONLY:
+1. Full name
+2. Role / designation (current title or most recent job title, years of experience if derivable)
+3. Contact (email, phone number, LinkedIn, GitHub — one line)
 
 Rules:
 - Use ONLY information present in the source text. Never invent facts.
-- Capture: full name, contact links (LinkedIn, GitHub, email, phone, site), a short
-  introduction, key skills, work experience (roles, companies, dates), and notable
-  projects with any URLs.
-- Keep it well-structured and readable (markdown headings/bullets are fine).
-- Output only the profile — no preamble, no commentary.
+- Plain text only — no markdown, no bullet points, no extra sections.
+- Output only the three lines, no preamble or commentary.
 
 SOURCE DOCUMENTS:
 {corpus}

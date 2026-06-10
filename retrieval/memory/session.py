@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from uuid import UUID
@@ -67,18 +68,20 @@ async def enrich_session_geo(session_id: str, ip: str | None, pool: Pool) -> Non
         )
         resp.raise_for_status()
         data = resp.json()
-        logger.info("Response from ipinfo call", data)
+        logger.info("Response from ipinfo call: %s", data)
 
         await pool.execute(
             "UPDATE sessions"
             " SET ip_city = $1, ip_region = $2, ip_country = $3,"
-            "     ip_asn = $4, ip_timezone = $5, geo_looked_up_at = now()"
-            " WHERE id = $6",
+            "     ip_asn = $4, ip_timezone = $5, geo_looked_up_at = now(),"
+            "     geo_raw = $6"
+            " WHERE id = $7",
             data.get("city"),
             data.get("region"),
             data.get("country"),
             data.get("org"),
             data.get("timezone"),
+            json.dumps(data),
             UUID(session_id),
         )
     except Exception as exc:
