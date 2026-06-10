@@ -1,39 +1,25 @@
-from json import load
+from __future__ import annotations
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-import os
-from dotenv import load_dotenv
-from app.schema.response_schema import APIResponse
 
-load_dotenv()
-API_KEY = os.getenv("X_API_KEY")
-X_NON_BROWSER_KEY = os.getenv("X_NON_BROWSER_KEY")
+from shared.security.apikey import validate_key_for_route
 
 
-class APIKeyMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Only protect POST requests
-        if request.method == "POST":
-            api_key = request.headers.get("x-api-key")
-            print("🔑 API Key received:", api_key)
-            print("Sys api key:", API_KEY)
-            user_agent = request.headers.get("user-agent", "")
-
-            if not api_key or api_key != API_KEY:
-                return APIResponse.error_response(
-                    message="Invalid or missing chat API key",
-                    data=None,
-                    status_code=401
-                )
-
-            if "mozilla" not in user_agent.lower():
-                api_key_2 = request.headers.get("x-non-browser-key")
-                if not api_key_2 or api_key_2 != X_NON_BROWSER_KEY:
-                    return APIResponse.error_response(
-                        message="Invalid or missing non-browser API key",
-                        data=None,
-                        status_code=401
-                    )
-
+async def apikey_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
         return await call_next(request)
+
+    raw_key = request.headers.get("X-API-Key")
+    print("The header api key is: ", raw_key)
+    valid, status = validate_key_for_route(raw_key, request.url.path)
+
+    if not valid:
+        message = "X-API-Key header is required" if status == 401 else "Invalid API key for this route"
+        return JSONResponse(
+            status_code=status,
+            content={"error": {"code": "UNAUTHORIZED",
+                               "message": message, "details": None}},
+        )
+
+    return await call_next(request)

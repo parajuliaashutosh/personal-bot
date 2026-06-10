@@ -1,305 +1,102 @@
-# 🤖 Personal RAG Chatbot
+# Personal Bot
 
-A production-grade, **data-agnostic** Personal AI Assistant that learns from your data. Built with FastAPI, ChromaDB, and modern RAG techniques. Works with **any data structure** - just add your files and go!
+A RAG-powered personal portfolio chatbot. Drop in your CV/bio as a Markdown or PDF file and it answers questions as you — in first person.
 
-## 🌟 Features
+## Prerequisites
 
-- **🎯 Data-Agnostic**: Works with any user's data automatically
-- **🔄 Hybrid Search**: Vector similarity + BM25 keyword search
-- **🚀 Production-Ready**: Rate limiting, streaming responses, proper error handling
-- **🧠 Smart Intent Recognition**: Adapts to your data types automatically
-- **🔌 Model-Agnostic**: OpenAI API or local Ollama support
-- **📊 Semantic Chunking**: Intelligent content type detection
-- **⚡ Fast Setup**: One-command setup script for new users
+- Python 3.11+
+- PostgreSQL with the `pgvector` extension
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- A Gemini API key **or** a local [Ollama](https://ollama.com) instance
 
-## 🚀 Quick Start
+## Setup
 
-### Option 1: Automated Setup (Recommended)
+### 1. Clone and install dependencies
 
 ```bash
-# Clone and setup
-git clone git@github.com:parajuliaashutosh/personal-bot.git
-cd fastapi-personal-chatbot
-python setup_personal_chatbot.py
+git clone <your-fork-url>
+cd personal-bot
+uv sync          # or: pip install -e .
 ```
 
-The setup script will:
+### 2. Set up PostgreSQL
 
-- Create example data files for you to customize
-- Set up environment configuration
-- Install dependencies
-- Process your data
-- Guide you through customization
+Create a database and enable pgvector:
 
-### Option 2: Manual Setup
+```sql
+CREATE DATABASE personal_chatbot;
+\c personal_chatbot
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+### 3. Configure environment
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Create your data files (see examples below)
-mkdir data
-# Add your .md, .txt, .yaml, .json files to data/
-
-# Set up environment
 cp .env.example .env
-# Edit .env with your API keys
+```
 
-# Process your data
-python -m app.memory.ingest
+Edit `.env` and fill in at minimum:
 
-# Start the server
+| Variable | Description |
+|---|---|
+| `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_NAME` | Postgres connection details |
+| `GEMINI_API_KEY` | Gemini API key (skip if using Ollama) |
+| `API_KEY` | Key clients send on `/chat/*` routes |
+| `ADMIN_KEY` | Key for `/ingest/*` routes |
+
+Set `LLM_PROVIDER=ollama` and configure `OLLAMA_*` vars if you prefer a local model.
+
+### 4. Add your data
+
+Put your CV or bio in the `data/` directory as a `.md` or `.pdf` file. The filename does not matter.
+
+```bash
+cp ~/my-cv.md data/
+```
+
+### 5. Run the server
+
+```bash
+uv run uvicorn app.main:app --reload
+# or without uv:
 uvicorn app.main:app --reload
 ```
 
-## 📁 Data Structure
+Migrations run automatically on startup. The API will be at `http://localhost:8000`.
 
-The system automatically adapts to any data structure. Here are recommended file types:
+### 6. Ingest your data
 
-### Supported File Types
-
-- **📝 Markdown (\*.md)**: Experience, projects, skills, any text content
-- **📄 Text (\*.txt)**: Notes, documentation, articles
-- **⚙️ YAML (\*.yaml)**: Structured data, configuration, profiles
-- **🗂️ JSON (\*.json)**: Structured data, API responses
-
-### Example Data Organization
-
-```
-data/
-├── profile.yaml          # Basic info: name, role, contact
-├── experience.md          # Work history and achievements
-├── projects.md           # Personal and professional projects
-├── skills.md             # Technical skills and expertise
-├── education.md          # Education and certifications
-└── any_other_files.*     # Blog posts, notes, anything!
-```
-
-### Sample Content Examples
-
-**profile.yaml**:
-
-```yaml
-name: "Your Name"
-current_role: "Your Position"
-summary: |
-  Brief description of yourself and expertise
-```
-
-**experience.md**:
-
-```markdown
-# Professional Experience
-
-## Software Engineer at Company
-
-- Built scalable APIs with Python/FastAPI
-- Implemented ML models for recommendation systems
-```
-
-**projects.md**:
-
-```markdown
-# Personal Projects
-
-## AI Chatbot
-
-Technologies: Python, FastAPI, ChromaDB, LLMs
-Built a personal assistant that learns from user data...
-```
-
-## ⚙️ Configuration
-
-### Environment Variables (.env)
+Once the server is running, trigger ingestion (requires `ADMIN_KEY`):
 
 ```bash
-# LLM Provider (choose one)
-OPENAI_API_KEY=your_openai_key_here
-# OR
+# Process and embed your documents
+curl -X POST http://localhost:8000/ingest/reprocess \
+  -H "X-API-Key: <your_admin_key>"
+```
+
+This also builds the persona from your documents, which seeds the chat prompt.
+
+## API
+
+| Route | Auth | Description |
+|---|---|---|
+| `POST /ingest/reprocess` | `ADMIN_KEY` | Re-ingest all files and rebuild persona |
+| `POST /chat/stream` | `API_KEY` | Stream a chat response (SSE) |
+| `GET /health` | none | Health check |
+| `GET /docs` | none | Interactive API docs (Swagger) |
+
+## Using Ollama instead of Gemini
+
+```env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2
-
-# Security
-API_KEY=your_secure_api_key
-
+OLLAMA_EMBED_MODEL=nomic-embed-text
 ```
 
-## 🔧 Usage
-
-### Start the Server
+Pull the models before starting:
 
 ```bash
-uvicorn app.main:app --reload
+ollama pull llama3.2
+ollama pull nomic-embed-text
 ```
-
-### API Documentation
-
-Visit: `http://localhost:8000/docs`
-
-### Example Requests
-
-**Chat with your AI:**
-
-```bash
-curl -X POST "http://localhost:8000/chat" \
-  -H "X-API-KEY: your_api_key" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Tell me about your Python experience"}'
-```
-
-**Refresh data after updates:**
-
-```bash
-python -m app.memory.ingest
-```
-
-## 🧠 How It Works
-
-### 1. **Adaptive Data Ingestion**
-
-- Automatically detects content types from file content (not filenames)
-- Extracts technologies and skills dynamically using regex patterns
-- Creates semantic chunks optimized for retrieval
-
-### 2. **Hybrid Search Engine**
-
-- **Vector Search**: Semantic similarity using embeddings
-- **BM25 Search**: Keyword-based search for exact terms
-- **Weighted Combination**: Best of both approaches
-
-### 3. **Intent Classification**
-
-- Dynamically configures based on available data types
-- Routes queries to appropriate data sources
-- Adapts to any user's data structure automatically
-
-### 4. **Context Generation**
-
-- Retrieves most relevant chunks for each query
-- Provides proper context to the LLM
-- Maintains conversation memory
-
-## 🏗️ Architecture
-
-```
-Data Files → Chunker → Vector DB → Hybrid Search → Context → LLM → Response
-     ↓           ↓          ↓           ↓          ↓        ↓
-   Content   Semantic   ChromaDB    BM25 +     Relevant  OpenAI/
-   Analysis  Chunking             Vector     Chunks    Ollama
-```
-
-### Key Components
-
-- **`app/memory/chunker.py`**: Content-aware document processing
-- **`app/memory/vector.py`**: Hybrid search implementation
-- **`app/config/intent_config.py`**: Adaptive intent routing
-- **`app/models/profile.py`**: Dynamic technology extraction
-- **`app/service/chat_service.py`**: Configuration-driven chat logic
-
-## 🔄 Updating Your Data
-
-When you modify your data files:
-
-1. **Edit your files** in the `data/` folder
-2. **Re-run ingestion**: `python -m app.memory.ingest`
-3. **Test immediately** - no server restart needed!
-
-The system will:
-
-- Clear old data automatically
-- Re-process all files
-- Update the intent configuration
-- Maintain conversation context
-
-## 🔍 Customization
-
-### Adding New Data Types
-
-The system automatically handles new file types:
-
-- Drop any `.md`, `.txt`, `.yaml`, `.json` file in `data/`
-- The chunker auto-detects content type and structure
-- Intent configuration adapts automatically
-
-### Technology Detection
-
-The system recognizes any technology mentioned in your content:
-
-- Programming languages: Python, TypeScript, Java, etc.
-- Frameworks: FastAPI, React, NestJS, etc.
-- Tools: Docker, Git, AWS, etc.
-- No configuration needed - uses smart regex patterns
-
-### Custom Intent Routing
-
-Edit `app/config/intent_config.py` to customize how queries are routed:
-
-```python
-# Add custom intent categories
-custom_intents = {
-    "hobbies": {
-        "keywords": ["hobby", "interest", "passion"],
-        "data_types": ["personal_interests"]
-    }
-}
-```
-
-## 🐳 Docker Support
-
-```bash
-# Build and run
-docker build -t personal-chatbot .
-docker run -p 8000:8000 -v ./data:/app/data personal-chatbot
-```
-
-## 🔒 Security Features
-
-- **API Key Authentication**: Secure your endpoints
-- **Rate Limiting**: Prevent abuse with configurable limits
-- **Input Validation**: Pydantic schemas for all requests
-- **CORS Configuration**: Safe cross-origin requests
-
-## 🤝 Contributing
-
-This project is designed to be easily extensible:
-
-1. **Add new LLM providers** in `app/llm/`
-2. **Enhance chunking strategies** in `app/memory/chunker.py`
-3. **Improve search algorithms** in `app/memory/vector.py`
-4. **Extend intent recognition** in `app/config/intent_config.py`
-
-## 📝 License
-
-MIT License - feel free to customize for your needs!
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-**"No data found" error:**
-
-- Ensure files are in the `data/` folder
-- Run `python -m app.memory.ingest` to process data
-- Check that files contain actual content
-
-**LLM connection errors:**
-
-- Verify API keys in `.env` file
-- For Ollama: ensure it's running on `http://localhost:11434`
-- Check network connectivity
-
-**Poor search results:**
-
-- Add more specific content to your data files
-- Include relevant keywords and technologies
-- Re-run ingestion after content updates
-
-### Getting Help
-
-1. Check the FastAPI docs at `/docs` endpoint
-2. Review error logs in the console
-3. Ensure your data files have sufficient content
-4. Test with simple queries first
-
----
-
-🚀 **Ready to build your personal AI assistant?** Run the setup script and start chatting with your data!

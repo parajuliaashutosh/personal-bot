@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import json
+from typing import AsyncIterator
+
+import httpx
+
+from shared.config.settings import settings
+
+_BASE_URL = "https://openrouter.ai/api/v1"
+_client = httpx.AsyncClient(timeout=120.0)
+
+
+async def generate(
+    prompt: str,
+    history: list[dict[str, str]],
+) -> AsyncIterator[str]:
+    messages = [{"role": m["role"], "content": m["content"]} for m in history]
+    messages.append({"role": "user", "content": prompt})
+
+    headers = {
+        "Authorization": f"Bearer {settings.openrouter_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    async with _client.stream(
+        "POST",
+        f"{_BASE_URL}/chat/completions",
+        headers=headers,
+        json={
+            "model": settings.openrouter_model,
+            "messages": messages,
+            "stream": True,
+        },
+    ) as resp:
+        resp.raise_for_status()
+        async for line in resp.aiter_lines():
+            if not line or not line.startswith("data: "):
+                continue
+            data = line[6:]
+            if data.strip() == "[DONE]":
+                break
+            chunk = json.loads(data)
+            token = (
+                chunk.get("choices", [{}])[0]
+                .get("delta", {})
+                .get("content", "")
+            )
+            if token:
+                yield token
