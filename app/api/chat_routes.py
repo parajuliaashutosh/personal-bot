@@ -22,11 +22,13 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 def _extract_ip(request: Request) -> tuple[str | None, str | None]:
-    """Return (real_ip, raw_x_forwarded_for). Uses X-Forwarded-For when present."""
+    """Return (real_ip, raw_x_forwarded_for). Prefers CF-Connecting-IP, then XFF, then client.host."""
     xff = request.headers.get("X-Forwarded-For")
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip.strip(), xff
     if xff:
-        real_ip = xff.split(",")[0].strip()
-        return real_ip, xff
+        return xff.split(",")[0].strip(), xff
     fallback = request.client.host if request.client else None
     return fallback, None
 
