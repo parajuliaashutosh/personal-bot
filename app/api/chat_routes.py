@@ -17,6 +17,7 @@ from retrieval.memory.session import (
 from retrieval.services.chat_service import build_chat_pipeline
 from shared.config.settings import settings
 from shared.models.schema import ChatRequest
+from shared.security.sanitizer import contains_profanity, sanitize_query
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -60,7 +61,6 @@ async def create_chat_session(
 @router.post("/")
 @limiter.limit("2/minute")
 async def chat(body: ChatRequest, request: Request):
-    from shared.security.sanitizer import sanitize_query
 
     pool = request.app.state.pool
     generate_fn = request.app.state.generate_fn
@@ -97,6 +97,21 @@ async def chat(body: ChatRequest, request: Request):
             status_code=400,
             detail={"code": err.code, "message": err.message},
         )
+
+    # ── Profanity check — save to DB but skip the full pipeline ──────────────
+    if contains_profanity(clean_query):
+        from shared.security.sanitizer import _PROFANITY_REPLY
+
+        async def profanity_stream():
+            await save_message(session_id, "user", clean_query, [], None, pool)
+            await save_message(session_id, "assistant", _PROFANITY_REPLY, [], None, pool)
+            await update_last_active(session_id, pool)
+            yield json.dumps({"success": True, "message": "token", "data": _PROFANITY_REPLY})
+            yield json.dumps({"success": True, "message": "done", "data": None})
+
+        response = EventSourceResponse(profanity_stream())
+        response.headers["X-Session-Id"] = session_id
+        return response
 
     # ── Run retrieval pipeline ────────────────────────────────────────────────
     reranked, history, prompt = await build_chat_pipeline(

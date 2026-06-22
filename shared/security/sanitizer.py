@@ -10,6 +10,20 @@ _INJECTION_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_PROFANITY_PATTERN = re.compile(
+    r"(?:fuck\w*|shit\w*|cunt\w*|\bass\b|\bbitch\b|\bdick\b|\bpussy\b|\bcock\b|\bbastard\b)",
+    re.IGNORECASE,
+)
+
+_PROFANITY_REPLY = (
+    "I'd love to help, but please keep the conversation respectful — "
+    "no offensive language. Feel free to ask again!"
+)
+
+
+def contains_profanity(query: str) -> bool:
+    return bool(_PROFANITY_PATTERN.search(query))
+
 
 def sanitize_query(query: str) -> tuple[str, AppError | None]:
     query = unicodedata.normalize("NFKC", query)
