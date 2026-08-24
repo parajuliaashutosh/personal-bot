@@ -140,43 +140,14 @@ async def list_documents(pool: Pool) -> list[dict]:
 
 
 async def purge_all_documents(pool: Pool) -> tuple[int, int]:
-    """Delete all documents (chunks cascade) and the persona row. Returns (doc_count, chunk_count) before deletion."""
+    """Delete all documents (chunks cascade). Returns (doc_count, chunk_count) before deletion."""
     counts = await pool.fetchrow(
         "SELECT COUNT(*)::int AS docs, "
         "(SELECT COUNT(*)::int FROM chunks) AS chunks "
         "FROM documents"
     )
     await pool.execute("DELETE FROM documents")
-    await pool.execute("DELETE FROM persona")
     return counts["docs"], counts["chunks"]
-
-
-async def get_corpus_text(pool: Pool, max_chars: int = 16000) -> str:
-    """Concatenate ingested chunk text (document/page order) up to max_chars — source for persona inference."""
-    rows = await pool.fetch(
-        "SELECT c.text FROM chunks c JOIN documents d ON d.id = c.document_id"
-        " WHERE d.status = 'ready'"
-        " ORDER BY d.filename, c.page_start, c.created_at"
-    )
-    parts: list[str] = []
-    total = 0
-    for r in rows:
-        t = r["text"]
-        if total + len(t) > max_chars:
-            break
-        parts.append(t)
-        total += len(t)
-    return "\n\n".join(parts)
-
-
-async def seed_persona(raw_text: str, pool: Pool) -> None:
-    """Upsert the single persona row (id=1) from raw text."""
-    await pool.execute(
-        "INSERT INTO persona (id, raw_text) VALUES (1, $1)"
-        " ON CONFLICT (id) DO UPDATE SET raw_text = EXCLUDED.raw_text,"
-        " updated_at = now()",
-        raw_text,
-    )
 
 
 async def create_ingest_run(file_names: list[str], pool: Pool) -> uuid.UUID:

@@ -1,51 +1,54 @@
 from __future__ import annotations
 
-_SYSTEM_WITH_PERSONA = """\
-You ARE the person described in ABOUT THIS PERSON below — not an assistant talking about them.
-Speak entirely in first person ("I", "my", "me").
+import logging
+import sys
+from pathlib import Path
 
-Identity rules — absolute:
-- Every response is written as that person speaking directly to the visitor.
-- "What are your skills?" → answer as "I know..." not "He knows..." or "The person...".
-- For greetings like "hi" or "hello", introduce yourself briefly: who you are, what you do.
-- Never mention being an AI, a bot, or a language model. Never break character.
+from shared.config.settings import settings
 
-Scope rules — follow in this exact order:
-1. RELEVANT INFO is provided AND the question is about me → answer fully using that info,
-   back it up with concrete examples, and include GitHub/project links where relevant.
-2. RELEVANT INFO is empty/missing AND the question is about me → acknowledge naturally that
-   you haven't shared that detail here, and invite them to reach out:
-   "That's not something I've gone into detail on here — drop me a message on LinkedIn
-   or email and I'd be happy to chat!"
-3. The question is unrelated to me entirely:
-   a. If it's a general knowledge/technical question (e.g. physics, math, cooking) →
-      just say you're not the right source for that and suggest they use a search engine
-      or relevant resource. Don't invite them to contact you.
-      Example: "That's a physics question — I'm not the right source for that! 
-      A quick Google or Wikipedia search should sort you out."
-   b. If they're looking for a service or help with something you *could plausibly offer*
-      (e.g. "can you build me a website", "I need a developer") → then redirect to LinkedIn/email.
-      Example: "That's not something I cover here, but if you're looking for a developer,
-      feel free to reach out on LinkedIn or email!"
-Never invent facts. Never answer off-topic questions in depth. Always stay in character.\
-"""
-_SYSTEM_GENERIC = """\
-You are a helpful assistant. Answer questions in first person, warmly and conversationally.
-If you don't know something, say so honestly.\
-"""
+logger = logging.getLogger(__name__)
+
+_SYSTEM_PROMPT_FILE = "system_persona.md"
 
 
-def build_prompt(query: str, context: str, persona_text: str = "") -> str:
-    system = _SYSTEM_WITH_PERSONA if persona_text.strip() else _SYSTEM_GENERIC
+def _load_system_prompt() -> str:
+    """Read the system persona prompt from disk. Missing or empty file is fatal."""
+    path = Path(settings.prompts_dir) / _SYSTEM_PROMPT_FILE
 
-    parts = [system]
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        logger.critical("System prompt file %s could not be read: %s", path, exc)
+        sys.exit(1)
 
-    if persona_text.strip():
-        parts.append(f"ABOUT THIS PERSON:\n{persona_text.strip()}")
+    if not text:
+        logger.critical("System prompt file %s is empty", path)
+        sys.exit(1)
+
+    return text
+
+
+_SYSTEM = _load_system_prompt()
+
+_STATE_FIRST = (
+    "FIRST MESSAGE — this is the opening turn. Introduce yourself in one short line, "
+    "then answer."
+)
+_STATE_FOLLOW_UP = (
+    "FOLLOW-UP — you have already introduced yourself earlier in this conversation. "
+    "Do NOT greet, do NOT state your name or job title again. Answer directly."
+)
+
+
+def build_prompt(query: str, context: str, is_first_turn: bool = True) -> str:
+    parts = [_SYSTEM]
 
     if context.strip():
         parts.append(f"RELEVANT INFO:\n{context.strip()}")
 
+    parts.append(
+        "CONVERSATION STATE:\n" + (_STATE_FIRST if is_first_turn else _STATE_FOLLOW_UP)
+    )
     parts.append(f"QUESTION:\n{query}")
     parts.append("ANSWER:")
 

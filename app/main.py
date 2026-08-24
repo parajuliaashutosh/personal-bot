@@ -57,14 +57,6 @@ async def lifespan(app: FastAPI):
     for _p in reversed(_providers[:-1]):
         generate = with_fallback(_p, generate)  # type: ignore[assignment]
 
-    # Load persona (seeded by the ingestion reprocess flow)
-    row = await pool.fetchrow("SELECT raw_text FROM persona WHERE id = 1")
-    app.state.persona_text = row["raw_text"] if row else ""
-    if not app.state.persona_text:
-        logging.warning(
-            "Persona is empty — run a reprocess to seed it; chat will use the generic prompt"
-        )
-
     app.state.pool = pool
     app.state.generate_fn = generate
     app.state.embed_fn = embed

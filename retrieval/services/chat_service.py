@@ -25,7 +25,6 @@ async def build_chat_pipeline(
     pool: Pool,
     generate_fn: Callable,
     embed_fn: Callable,
-    persona_text: str,
 ) -> tuple[list[dict[str, Any]], list[tuple[str, str]], str]:
     """Run the full retrieval pipeline. Returns (reranked_chunks, history, prompt)."""
 
@@ -58,6 +57,6 @@ async def build_chat_pipeline(
     # Step 6: Build context string, fetch history, assemble final prompt
     context_str = build_context(reranked, settings.context_token_limit)
     history = await fetch_last_3(session_id, pool)
-    prompt = build_prompt(clean_query, context_str, persona_text)
+    prompt = build_prompt(clean_query, context_str, is_first_turn=not history)
 
     return reranked, history, prompt

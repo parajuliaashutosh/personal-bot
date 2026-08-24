@@ -26,6 +26,7 @@ COPY --from=builder /app/ingestion ingestion/
 COPY --from=builder /app/retrieval retrieval/
 COPY --from=builder /app/shared shared/
 COPY data/ data/
+COPY prompts/ prompts/
 
 ENV PATH="/app/.venv/bin:$PATH" \
   PYTHONDONTWRITEBYTECODE=1 \

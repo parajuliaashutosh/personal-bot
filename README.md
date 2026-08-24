@@ -1,6 +1,7 @@
 # Personal Bot
 
-A RAG-powered personal portfolio chatbot. Drop in your CV/bio as a Markdown or PDF file and it answers questions as you — in first person.
+A RAG-powered personal portfolio chatbot. Drop in your CV/bio as a Markdown or PDF file,
+edit one prompt file, and it answers questions as you — in first person.
 
 ## Prerequisites
 
@@ -54,7 +55,31 @@ Put your CV or bio in the `data/` directory as a `.md` or `.pdf` file. The filen
 cp ~/my-cv.md data/
 ```
 
-### 5. Run the server
+### 5. Make it *you* — edit the system prompt
+
+**This is the one file you must edit.** `prompts/system_persona.md` is the bot's identity:
+who it is, how it greets, when it deflects, plus few-shot examples showing the shape of a
+good answer.
+
+```bash
+$EDITOR prompts/system_persona.md
+```
+
+Replace the `## Who I am` block (name, role, background, stack, contact) and rewrite the
+answers under `## Examples` so they use *your* facts. The rule sections — identity,
+greeting, scope, tooling, style — work unchanged; leave them alone unless you want
+different behaviour.
+
+Notes:
+
+- The prompt is read once at startup. **Restart the server after editing it.**
+- The file is required: if it's missing or empty the app logs the error and exits rather
+  than serving a broken persona.
+- Point `PROMPTS_DIR` at another directory if you keep prompts elsewhere.
+- Detailed facts (dates, project links, numbers) don't belong here — they come from your
+  documents in `data/` via retrieval. Keep this file to a short identity card plus rules.
+
+### 6. Run the server
 
 ```bash
 uv run uvicorn app.main:app --reload
@@ -64,7 +89,7 @@ uvicorn app.main:app --reload
 
 Migrations run automatically on startup. The API will be at `http://localhost:8000`.
 
-### 6. Ingest your data
+### 7. Ingest your data
 
 Once the server is running, trigger ingestion (requires `ADMIN_KEY`):
 
@@ -74,13 +99,13 @@ curl -X POST http://localhost:8000/ingest/reprocess \
   -H "X-API-Key: <your_admin_key>"
 ```
 
-This also builds the persona from your documents, which seeds the chat prompt.
+Every chat answer is grounded in the chunks retrieved from these documents.
 
 ## API
 
 | Route | Auth | Description |
 |---|---|---|
-| `POST /ingest/reprocess` | `ADMIN_KEY` | Re-ingest all files and rebuild persona |
+| `POST /ingest/reprocess` | `ADMIN_KEY` | Purge and re-ingest all files in `data/` |
 | `POST /chat/stream` | `API_KEY` | Stream a chat response (SSE) |
 | `GET /health` | none | Health check |
 | `GET /docs` | none | Interactive API docs (Swagger) |

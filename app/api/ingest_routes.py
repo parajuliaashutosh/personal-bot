@@ -55,10 +55,9 @@ async def process_one(filename: str, request: Request):
 async def reprocess_all(request: Request):
     pool = request.app.state.pool
     embed_fn = request.app.state.embed_fn
-    generate_fn = request.app.state.generate_fn
 
     async def generate():
-        async for event in reprocess_stream(settings.data_dir, pool, embed_fn, generate_fn):
+        async for event in reprocess_stream(settings.data_dir, pool, embed_fn):
             yield event
 
     return EventSourceResponse(generate())

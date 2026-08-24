@@ -120,7 +120,6 @@ async def chat(body: ChatRequest, request: Request):
         pool=pool,
         generate_fn=generate_fn,
         embed_fn=embed_fn,
-        persona_text=request.app.state.persona_text,
     )
 
     chunk_ids = [c["id"] for c in reranked]

@@ -65,5 +65,8 @@ class Settings(BaseSettings):
     # Retrieval limits
     context_token_limit: int = 3000
 
+    # System prompts — markdown files loaded at startup (missing file = fatal)
+    prompts_dir: str = "prompts"
+
 
 settings = Settings()
