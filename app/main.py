@@ -120,7 +120,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "HEAD", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key",
-                   "X-SESSION-ID", "Authorization", "Accept"],
+                   "X-SESSION-ID", "X-Retry-Attempt", "Authorization", "Accept"],
 )
 
 app.include_router(ingest_routes.router)
