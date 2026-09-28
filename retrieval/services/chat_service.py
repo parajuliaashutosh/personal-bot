@@ -36,7 +36,7 @@ async def build_chat_pipeline(
 
     # Step 3: Embed original + first variation for multi-vector search
     all_queries = [clean_query] + variations
-    embeddings = await embed_fn(all_queries[:2])
+    embeddings = await embed_fn(all_queries[:settings.max_query_vectors])
 
     # Step 4: Search — vector, keyword, and session memory in parallel
     vector_batches = await asyncio.gather(
@@ -52,7 +52,7 @@ async def build_chat_pipeline(
     # Step 5: Merge duplicates, rank by relevance, then rerank with LLM
     candidates = merge(vector_results + kw_results + mem_results)
     ranked = rank(candidates, query_ctx)
-    reranked = await rerank(clean_query, ranked[:20], generate_fn)
+    reranked = await rerank(clean_query, ranked[:20], generate_fn, query_ctx)
 
     # Step 6: Build context string, fetch history, assemble final prompt
     context_str = build_context(reranked, settings.context_token_limit)

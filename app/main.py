@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api import chat_routes, ingest_routes
+from app.api import admin_routes, chat_routes, ingest_routes
 from app.limiter import limiter
 from app.middleware.apikey_middleware import apikey_middleware
 from app.middleware.error_middleware import error_middleware
@@ -34,28 +34,44 @@ async def lifespan(app: FastAPI):
         from retrieval.llm.ollama import embed  # type: ignore[no-redef]
 
     # Build generate chain: primary → github_models → gemini (each skipped if key absent)
-    from retrieval.llm.fallback import with_fallback
+    # Each provider is wrapped as: idle-timeout → retry → fallback to the next.
+    from retrieval.llm.fallback import with_fallback, with_retry
+    from retrieval.llm.guards import with_idle_timeout
 
-    _providers = []
+    _providers: list[tuple[str, object]] = []
     if settings.llm_provider == "openrouter" and settings.openrouter_api_key:
         from retrieval.llm.openrouter import generate as _g
-        _providers.append(_g)
+        _providers.append(("openrouter", _g))
     if settings.github_models_token:
         # type: ignore[no-redef]
         from retrieval.llm.github_models import generate as _gh
-        _providers.append(_gh)
+        _providers.append(("github_models", _gh))
     if settings.gemini_api_key:
         # type: ignore[no-redef]
         from retrieval.llm.gemini import generate as _gm
-        _providers.append(_gm)
+        _providers.append(("gemini", _gm))
     if not _providers or settings.llm_provider == "ollama":
         # type: ignore[no-redef]
         from retrieval.llm.ollama import generate as _ol
-        _providers.append(_ol)
+        _providers.append(("ollama", _ol))
 
-    generate = _providers[-1]
-    for _p in reversed(_providers[:-1]):
+    def _harden(name: str, fn):
+        fn._provider_name = name  # type: ignore[attr-defined]
+        return with_retry(with_idle_timeout(fn))
+
+    _hardened = [_harden(name, fn) for name, fn in _providers]
+
+    generate = _hardened[-1]
+    for _p in reversed(_hardened[:-1]):
         generate = with_fallback(_p, generate)  # type: ignore[assignment]
+
+    logging.getLogger(__name__).info(
+        "LLM chain: %s (retries=%d, idle_timeout=%.0fs, continue_on_truncation=%s)",
+        " -> ".join(name for name, _ in _providers),
+        settings.llm_retry_attempts,
+        settings.llm_stream_idle_timeout,
+        settings.llm_continue_on_truncation,
+    )
 
     app.state.pool = pool
     app.state.generate_fn = generate
@@ -107,6 +123,7 @@ app.add_middleware(
 
 app.include_router(ingest_routes.router)
 app.include_router(chat_routes.router)
+app.include_router(admin_routes.router)
 
 
 @app.api_route("/health", methods=["GET", "HEAD"], tags=["health"])

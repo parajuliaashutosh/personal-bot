@@ -15,6 +15,22 @@ QUERY_INJECTION = "QUERY_INJECTION"
 QUERY_PROFANITY = "QUERY_PROFANITY"
 INTERNAL_ERROR = "INTERNAL_ERROR"
 
+# Retrieval / generation
+RETRIEVAL_FAILED = "RETRIEVAL_FAILED"          # pipeline died before generation started
+LLM_PROVIDER_ERROR = "LLM_PROVIDER_ERROR"      # one provider attempt failed (may be recovered)
+LLM_UNAVAILABLE = "LLM_UNAVAILABLE"            # every provider in the chain failed
+STREAM_TRUNCATED = "STREAM_TRUNCATED"          # tokens were sent, then the stream broke
+STREAM_CUT_SHORT = "STREAM_CUT_SHORT"          # provider closed cleanly but mid-answer
+
+# Errors the client is allowed to retry by re-sending the same query
+RETRYABLE_CODES = frozenset({
+    RETRIEVAL_FAILED,
+    LLM_UNAVAILABLE,
+    STREAM_TRUNCATED,
+    STREAM_CUT_SHORT,
+    INTERNAL_ERROR,
+})
+
 
 @dataclass
 class AppError:

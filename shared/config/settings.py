@@ -64,8 +64,22 @@ class Settings(BaseSettings):
 
     # Retrieval limits
     context_token_limit: int = 3000
+    max_query_vectors: int = 2       # query + variations embedded per chat
+    llm_query_expansion: bool = False  # true = +1 generate call per chat
+    llm_rerank: bool = False           # true = +1 generate call per chat
+    rerank_relevance_weight: float = 0.5  # lower = more diverse passages
 
-    # System prompts — markdown files loaded at startup (missing file = fatal)
+    # Generation resilience
+    llm_retry_attempts: int = 3          # per provider, only before the first token
+    llm_retry_base_delay: float = 0.5    # seconds; doubles each attempt
+    llm_stream_idle_timeout: float = 45.0  # seconds without a token = dead stream
+    llm_continue_on_truncation: bool = True  # let the fallback finish a cut-off answer
+
+    chat_rate_limit: str = "2/minute"   # new questions; a retry is free here
+    chat_burst_limit: str = "8/minute"  # hard ceiling, charged on every request
+    client_max_retries: int = 2          # advertised to the frontend in error events
+    client_retry_after_ms: int = 1200    # base backoff advertised to the frontend
+
     prompts_dir: str = "prompts"
 
 
