@@ -127,7 +127,7 @@ async def create_chat_session(
     return response
 
 
-@router.post("/")
+@router.post("")
 @limiter.limit(settings.chat_burst_limit)                      # hard ceiling, always charged
 @limiter.limit(settings.chat_rate_limit, cost=question_cost)   # new questions only
 async def chat(body: ChatRequest, request: Request):

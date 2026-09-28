@@ -15,6 +15,7 @@ from app.limiter import limiter
 from app.middleware.apikey_middleware import apikey_middleware
 from app.middleware.error_middleware import error_middleware
 from app.middleware.logging_middleware import logging_middleware
+from app.middleware.path_middleware import trailing_slash_middleware
 from shared.config.settings import settings
 from shared.db.postgres import close_pool, get_pool, run_migrations
 
@@ -110,6 +111,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.middleware("http")(error_middleware)
 app.middleware("http")(logging_middleware)
 app.middleware("http")(apikey_middleware)
+app.middleware("http")(trailing_slash_middleware)
 
 # CORS must be registered last so it becomes outermost and handles preflight before any other middleware
 app.add_middleware(
