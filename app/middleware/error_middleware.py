@@ -1,43 +1,64 @@
 from __future__ import annotations
 
+import asyncio
 import logging
-import uuid
 
 from fastapi import Request
-from fastapi.responses import JSONResponse
 
+from app.responses import fail
 from shared.db.error_log import log_error
 from shared.errors import INTERNAL_ERROR
 
 logger = logging.getLogger(__name__)
 
+_pending: set[asyncio.Task] = set()
+
+
+def _log_in_background(request: Request, **fields) -> None:
+    """Write to error_logs without making the response wait on the insert."""
+    task = asyncio.create_task(log_error(
+        getattr(request.app.state, "pool", None),
+        path=request.url.path,
+        session_id=request.headers.get("X-Session-Id"),
+        **fields,
+    ))
+    _pending.add(task)
+    task.add_done_callback(_pending.discard)
+
 
 async def error_middleware(request: Request, call_next):
     try:
-        return await call_next(request)
+        response = await call_next(request)
     except Exception as exc:
-        error_id = str(uuid.uuid4())
         logger.exception("Unhandled exception on %s %s: %s",
                          request.method, request.url.path, exc)
-        # Streaming routes handle their own failures inside the SSE body — this
-        # only catches errors raised before a response has started.
-        await log_error(
-            getattr(request.app.state, "pool", None),
+
+        _log_in_background(
+            request,
             scope="http",
             code=INTERNAL_ERROR,
             exc=exc,
-            path=request.url.path,
             status_code=500,
-            session_id=request.headers.get("X-Session-Id"),
-            context={"error_id": error_id, "method": request.method},
+            context={"method": request.method},
         )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": {
-                    "code": INTERNAL_ERROR,
-                    "message": "An internal server error occurred",
-                    "details": {"error_id": error_id},
-                }
+        return fail(500, INTERNAL_ERROR)
+
+    status = response.status_code
+    if status >= 400:
+        reason = getattr(request.state, "error_message", None)
+        _log_in_background(
+            request,
+            scope="client" if status < 500 else "http",
+            code=getattr(request.state, "error_code", None) or f"HTTP_{status}",
+            message=f"{request.method} {request.url.path} -> {status}"
+                    + (f": {reason}" if reason else ""),
+            status_code=status,
+            with_stack=False,
+            context={
+                "method": request.method,
+                "query": str(request.url.query) or None,
+                "client_ip": request.client.host if request.client else None,
+                "user_agent": request.headers.get("user-agent"),
             },
         )
+    return response

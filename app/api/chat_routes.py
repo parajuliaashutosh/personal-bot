@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
 from app.limiter import limiter, question_cost, retry_attempt
+from app.responses import ok
 from retrieval.llm.errors import StreamTruncated
 from retrieval.llm.reporting import set_error_hook
 from retrieval.memory.chat_history import save_message
@@ -120,8 +121,8 @@ async def create_chat_session(
 
     response = JSONResponse(
         status_code=201,
-        content={"success": True, "message": "session created",
-                 "data": {"session_id": str(session_id)}},
+        content=ok({"session_id": str(session_id)},
+                   message="Session created", code="SESSION_CREATED"),
     )
     response.headers["X-Session-Id"] = str(session_id)
     return response

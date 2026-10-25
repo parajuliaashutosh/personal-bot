@@ -107,7 +107,8 @@ async def list_errors(
         args.append(sid)
         clauses.append(f"session_id = ${len(args)}")
     if unrecovered_only:
-        clauses.append("NOT recovered")
+        # Handled 4xx responses are never "recovered"; they are not server failures either.
+        clauses.append("NOT recovered AND scope <> 'client'")
 
     where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
     args.extend([limit, offset])

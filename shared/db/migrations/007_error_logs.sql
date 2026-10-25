@@ -3,11 +3,11 @@
 CREATE TABLE IF NOT EXISTS error_logs (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     occurred_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    scope        TEXT NOT NULL,                 -- chat_stream | llm_provider | retrieval | http | ingest
+    scope        TEXT NOT NULL,                 -- chat_stream | llm_provider | retrieval | http | client | ingest
     code         TEXT NOT NULL,                 -- shared.errors constant
     message      TEXT NOT NULL,
     exc_type     TEXT,
-    provider     TEXT,                          -- openrouter | github_models | gemini | ollama
+    provider     TEXT,
     attempt      INT  NOT NULL DEFAULT 0,       -- 0-based retry attempt that failed
     recovered    BOOLEAN NOT NULL DEFAULT FALSE,-- true = a retry/fallback rescued the request
     session_id   UUID REFERENCES sessions(id) ON DELETE SET NULL,

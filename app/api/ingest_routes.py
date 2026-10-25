@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
+from app.responses import ok, page
 from ingestion.services.ingest_service import process_files, reprocess_stream
 from ingestion.storage.db_store import get_eligible_files, list_documents, list_ingest_runs
 from shared.config.settings import settings
@@ -17,7 +18,8 @@ async def process_all(request: Request):
     eligible, skipped = await get_eligible_files(settings.data_dir, pool)
 
     if not eligible:
-        return {"queued": [], "skipped": skipped, "failed": []}
+        return ok({"queued": [], "skipped": skipped, "failed": []},
+                  message="Nothing to process", code="NOTHING_TO_PROCESS")
 
     async def generate():
         async for event in process_files(eligible, pool, embed_fn):
@@ -66,10 +68,10 @@ async def reprocess_all(request: Request):
 @router.get("/documents")
 async def get_documents(request: Request):
     pool = request.app.state.pool
-    return await list_documents(pool)
+    return ok(page(await list_documents(pool)))
 
 
 @router.get("/runs")
 async def get_ingest_runs(request: Request):
     pool = request.app.state.pool
-    return await list_ingest_runs(pool)
+    return ok(page(await list_ingest_runs(pool)))

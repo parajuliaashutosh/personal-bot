@@ -31,9 +31,9 @@ class StreamCutShort(Exception):
 
 # OpenAI-style finish reasons that mean "this answer is not complete".
 INCOMPLETE_FINISH_REASONS = {"length", "content_filter", "error"}
-# Gemini finish reasons that mean the same thing.
-INCOMPLETE_GEMINI_REASONS = {"MAX_TOKENS", "SAFETY", "RECITATION", "BLOCKLIST",
-                             "PROHIBITED_CONTENT", "SPII", "MALFORMED_FUNCTION_CALL", "OTHER"}
+
+# Anthropic Messages-style stop reasons that mean the same.
+INCOMPLETE_STOP_REASONS = {"max_tokens", "refusal"}
 
 
 def with_idle_timeout(fn: GenerateFn, timeout: float | None = None) -> GenerateFn:

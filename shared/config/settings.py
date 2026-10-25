@@ -23,31 +23,42 @@ class Settings(BaseSettings):
             )
         return self
 
-    # LLM provider — chain: primary → github_models → gemini (each skipped if key absent)
-    llm_provider: str = "openrouter"  # "openrouter" | "gemini" | "ollama"
+    # LLM providers — chain: primary → the other one (each skipped if key absent)
+    llm_provider: str = "openrouter"  # primary: "openrouter" | "anthropic"
 
-    # Gemini (embed always uses this when key present; fallback for generate)
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
-    gemini_embed_model: str = "text-embedding-004"
-    embed_dimensions: int = 768  # must match vector(N) in DB schema
-
-    # OpenRouter (primary generate)
+    # OpenRouter
     openrouter_api_key: str = ""
     openrouter_model: str = "meta-llama/llama-3.3-70b-instruct"
 
-    # GitHub Models (secondary generate fallback)
-    github_models_token: str = ""
-    github_models_model: str = "Meta-Llama-3.1-8B-Instruct"
+    # Anthropic Messages API format. Defaults to DeepSeek's Anthropic-compatible
+    # endpoint, so a DeepSeek key goes in ANTHROPIC_API_KEY; set the base URL to
+    # https://api.anthropic.com (and a Claude model) to use Anthropic itself.
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = "https://api.deepseek.com/anthropic"
+    anthropic_model: str = "deepseek-chat"
+    anthropic_max_tokens: int = 4096
 
-    # Ollama (local fallback for both embed and generate)
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.2"
-    ollama_embed_model: str = "nomic-embed-text"
+    # Embeddings — the chat providers may lack an embeddings endpoint, so this is any
+    # OpenAI-compatible /embeddings service; defaults to OpenRouter.
+    embed_base_url: str = "https://openrouter.ai/api/v1"
+    embed_api_key: str = ""  # falls back to OPENROUTER_API_KEY
+    embed_model: str = "openai/text-embedding-3-small"
+    embed_dimensions: int = 768  # must match vector(N) in DB schema
 
     # Security — two route-scoped keys
     api_key: str       # valid on /chat/* only
-    admin_key: str     # valid on /ingest/* and /admin/* only
+
+    # Admin login — short-lived JWT access token plus a rotating refresh token
+    jwt_secret: str = ""           # required, >= 32 chars (e.g. `openssl rand -hex 32`)
+    jwt_expire_minutes: int = 15
+    refresh_expire_days: int = 7
+    admin_email: str = ""          # seeded on startup if no such user exists
+    admin_password: str = ""
+    cookie_name: str = "admin_token"
+    refresh_cookie_name: str = "admin_refresh"
+    cookie_secure: bool = False    # false for local http dev; set true behind https
+    cookie_samesite: str = "lax"   # "lax" | "strict" | "none" (none requires secure)
+    cookie_domain: str = ""        # empty = host-only cookie
 
     # CORS
     cors_origins: list[str] = [

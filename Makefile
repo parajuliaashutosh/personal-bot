@@ -21,4 +21,7 @@ print:
 	@echo "Tag      : $(TAG)"
 	@echo "Full     : $(FULL_IMAGE)"
 
-.PHONY: build push deploy clean print
+seed-admin:
+	uv run seed-admin
+
+.PHONY: build push deploy clean print seed-admin
