@@ -11,6 +11,7 @@ COPY app/ app/
 COPY ingestion/ ingestion/
 COPY retrieval/ retrieval/
 COPY shared/ shared/
+COPY scripts/ scripts/
 RUN uv sync --frozen --no-dev
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ COPY --from=builder /app/app app/
 COPY --from=builder /app/ingestion ingestion/
 COPY --from=builder /app/retrieval retrieval/
 COPY --from=builder /app/shared shared/
+COPY --from=builder /app/scripts scripts/
 COPY data/ data/
 COPY prompts/ prompts/
 
