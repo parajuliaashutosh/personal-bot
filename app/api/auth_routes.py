@@ -75,8 +75,8 @@ async def login(request: Request, response: Response, body: LoginRequest):
         "SELECT id, email, password_hash FROM admin_users WHERE email = $1",
         body.email.strip().lower(),
     )
-    ok = verify_password(body.password, row["password_hash"] if row else DUMMY_HASH)
-    if not row or not ok:
+    valid = verify_password(body.password, row["password_hash"] if row else DUMMY_HASH)
+    if not row or not valid:
         raise _unauthorized("Invalid email or password")
 
     async with pool.acquire() as conn, conn.transaction():
